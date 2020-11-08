@@ -3,7 +3,7 @@ struct Simplex{T<:Number, U}
   perm::Vector{Int}
   function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U}
     sort!(vertices, by=v->angle(value(v)))
-    perm = sortperm(vertices, by=x->norm(value(x)))
+    perm = sortperm(vertices, by=x->abs(value(x)))
     return new{T,U}(vertices, perm)
   end
 end
@@ -44,7 +44,7 @@ function Base.push!(s::Simplex, v::Vertex)
   @assert !any(isequal(x, v) for x in s.vertices)
   push!(s.vertices, v)
   l = length(s.vertices)
-  s.perm[1:l] .= sortperm(s.vertices, by=x->norm(value(x)))
+  s.perm[1:l] .= sortperm(s.vertices, by=x->abs(value(x)))
   return nothing
 end
 Base.iterate(s::Simplex) = iterate(s.vertices)
@@ -62,11 +62,11 @@ remove!(s::Simplex, x::Vector) = deleteat!(s.vertices, x)
 sortbyangle!(s::Simplex) = sort!(s, by=v->angle(value(v)))
 issortedbyangle(s::Simplex) = issorted(s, by=v->angle(value(v)))
 
-sortnorm(s, index) = s.vertices[s.perm[index]]
+sortabs(s, index) = s.vertices[s.perm[index]]
 
-bestvertex(s::Simplex) = sortnorm(s, 1)
-worstvertex(s::Simplex) = sortnorm(s, length(s))
-secondworstvertex(s::Simplex) = sortnorm(s, length(s) - 1)
+bestvertex(s::Simplex) = sortabs(s, 1)
+worstvertex(s::Simplex) = sortabs(s, length(s))
+secondworstvertex(s::Simplex) = sortabs(s, length(s) - 1)
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   g(v) = isequal(v, ignoredvertex) ? zero(position(v)) : position(v)

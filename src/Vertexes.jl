@@ -11,9 +11,9 @@ newposition(a::Vertex, ϵ::Number, b::Vertex) = a + ϵ * (a - b)
 # must explicitly use <= and >= because == can't overridden and will
 # be used in conjunction with < to create a <=
 import Base: isless, +, -, <=, >=, isequal, isnan, hash
-Base.isless(a::Vertex, b::Vertex) = norm(value(a)) < norm(value(b))
-Base.:<=(a::Vertex, b::Vertex) = norm(value(a)) <= norm(value(b))
-Base.:>=(a::Vertex, b::Vertex) = norm(value(a)) >= norm(value(b))
+Base.isless(a::Vertex, b::Vertex) = abs(value(a)) < abs(value(b))
+Base.:<=(a::Vertex, b::Vertex) = abs(value(a)) <= abs(value(b))
+Base.:>=(a::Vertex, b::Vertex) = abs(value(a)) >= abs(value(b))
 Base.:+(a::Vertex, b) = position(a) .+ b
 Base.:-(a::Vertex, b::Vertex) = position(a) .- position(b)
 function Base.isequal(a::Vertex, b::Vertex)

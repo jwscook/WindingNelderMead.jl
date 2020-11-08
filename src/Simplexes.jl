@@ -8,8 +8,17 @@ struct Simplex{T<:Number, U}
   end
 end
 
+function Simplex(f::T, ic::AbstractVector{U}, initial_step::Number
+    ) where {T<:Function, U<:Number}
+  return Simplex(f, ic, initial_step .+ zeros(Bool, ic))
+end
+
 function Simplex(f::T, ic::AbstractVector{U}, initial_step::AbstractVector{V}
     ) where {T<:Function, U<:Number, V<:Number}
+  if any(iszero.(initial_step))
+    throw(ArgumentError("initial_step, $initial_step  must not have any zero
+                        values"))
+  end
   if length(ic) != length(initial_step)
     throw(ArgumentError("ic, $ic must be same length as initial_step
                         $initial_step"))

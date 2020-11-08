@@ -1,7 +1,5 @@
 module WindingNelderMead
 
-using LinearAlgebra
-
 include("Vertexes.jl")
 include("Simplexes.jl")
 
@@ -23,9 +21,8 @@ Find minimum of function, `f`, first creating a Simplex using a starting
 vertex position, `initial_position`, and other vertices `initial_step` away from
 that point in all directions, and options passed in via kwargs.
 """
-function optimise(f::T, initial_position::AbstractVector{U},
-               initial_step::AbstractVector{V}; kwargs...
-               ) where {T<:Function, U<:Number, V<:Number}
+function optimise(f::T, initial_position::AbstractVector{U}, initial_step;
+                  kwargs...) where {T<:Function, U<:Number, V<:Number}
   return optimise(f, Simplex(f, initial_position, initial_step); kwargs...)
 end
 
@@ -38,21 +35,25 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   ftol_rel = get(kwargs, :ftol_rel, eps(real(T)))
   stopval = get(kwargs, :stopval, eps(real(T)))
   maxiters = get(kwargs, :maxiters, 1000)
+  balloon_limit = get(kwargs, :balloon_limit, 10)
 
   α = get(kwargs, :α, 1)
   β = get(kwargs, :β, 0.5)
   γ = get(kwargs, :γ, 2)
   δ = get(kwargs, :δ, 0.5)
+  ϵ = get(kwargs, :ϵ, 20)
   α >= 0 || error(ArgumentError("$α >= 0"))
   0 <= β < 1 || error(ArgumentError("0 <= $β < 1"))
   γ > 1 || error(ArgumentError("$γ > 1"))
   γ > α || error(ArgumentError("$γ > $α"))
+  ϵ > 0 || error(ArgumentError("$ϵ > 0"))
   if any(iszero.(xtol_rel) .& iszero.(xtol_abs))
     throw(ArgumentError("xtol_rel .& xtol_abs must not contain zeros"))
   end
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
+          balloon_limit=balloon_limit, maxiters=maxiters,
+          α=α, β=β, γ=γ, δ=δ, ϵ=ϵ)
 end
 
 
@@ -80,6 +81,7 @@ algorithm
 -  β (default 0.5): Contraction factor
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
+-  ϵ (default 20): Balooning factor
 """
 function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real, U}
 
@@ -89,19 +91,21 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   expand(this, other) = Vertex(newposition(this, -config[:γ], other), f)
   contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
+  balloon(this, other) = Vertex(newposition(this, -config[:ϵ], other), f)
 
-  function shrink!(s::Simplex)
+  function mutate!(s::Simplex, op::V, vertex::Vertex) where {V}
     lengthbefore = length(s)
-    best = bestvertex(s)
-    newvertices = [shrink(best, v) for v ∈ s if !isequal(v, best)]
-    remove!(s, findall(v->!isequal(v, best), s.vertices))
+    newvertices = [shrink(vertex, v) for v ∈ s if !isequal(v, vertex)]
+    remove!(s, findall(v->!isequal(v, vertex), s.vertices))
     map(nv->push!(s, nv), newvertices)
-    sort!(s, by=v->norm(value(v)))
+    sort!(s, by=v->abs(value(v)))
     @assert length(s) == lengthbefore
     return nothing
   end
+  shrink!(s::Simplex) = mutate!(s, shrink, bestvertex(s))
+  balloon!(s::Simplex) = mutate!(s, balloon, Vertex(centre(s), f))
 
-  iters, totaltime = 0, 0.0
+  iters, totaltime, nballoons = 0, 0.0, 0
   returncode = assessconvergence(s, config)
   history = deepcopy(s.vertices)
   while returncode == :CONTINUE && totaltime < config[:timelimit]
@@ -116,8 +120,14 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
         reflected = reflect(centroid, worst)
 
         if any(h->isequal(h, reflected), history)
-          returncode = :ENDLESS_NELDERMEAD_LOOP
-          break
+          if nballoons < config[:balloon_limit]
+            balloon!(s)
+            nballoons += 1
+            continue
+          else
+            returncode = :ENDLESS_NELDERMEAD_LOOP
+            break
+          end
         end
         history .= circshift(history, 1)
         history[1] = reflected

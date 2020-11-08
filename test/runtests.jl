@@ -1,4 +1,4 @@
-using Random, Test, WindingNelderMead, LinearAlgebra
+using Random, Test, WindingNelderMead
 using WindingNelderMead: Vertex, Simplex, windingnumber, windingangle
 using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
 
@@ -46,59 +46,57 @@ using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
       @test windingnumber(doesntenclosezero) == 0
     end
 
-    #@testset "Simplices with identical vertices is converged" begin
-    #  dim = 2
-    #  T = Float64
-    #  U = ComplexF64
-    #  pos = T[1.0, 1.0]
-    #  val = rand(U)
-    #  v1 = Vertex(pos, val)
-    #  v2 = Vertex(pos, val)
-    #  v3 = Vertex(pos, val)
-    #  s = Simplex([v1, v2, v3])
+    @testset "Simplices with identical vertices is converged" begin
+      dim = 2
+      T = Float64
+      U = ComplexF64
+      pos = T[1.0, 1.0]
+      val = rand(U)
+      v1 = Vertex(pos, val)
+      v2 = Vertex(pos, val)
+      v3 = Vertex(pos, val)
+      s = Simplex([v1, v2, v3])
 
-    #  defaults = WindingNelderMead.convergenceconfig(dim, T)
-    #  isconverged, returncode = assessconvergence(s, defaults)
-    #  @test isconverged
-    #  @test returncode == :XTOL_REACHED
-    #end
+      defaults = WindingNelderMead.convergenceconfig(dim, T)
+      returncode = assessconvergence(s, defaults)
+      @test returncode == :XTOL_REACHED
+    end
 
-    #@testset "Simplices in a simplex eps apart are converged" begin
-    #  dim = 2
-    #  T = Float64
-    #  U = ComplexF64
-    #  v1 = Vertex([one(T), one(T)], rand(U))
-    #  v2 = Vertex([one(T), one(T) + eps(T)], rand(U))
-    #  v3 = Vertex([one(T) + eps(T), one(T)], rand(U))
-    #  s = Simplex([v1, v2, v3])
-    #  defaults = WindingNelderMead.convergenceconfig(dim, T)
-    #  isconverged, returncode = assessconvergence(s, defaults)
-    #  @test isconverged
-    #  @test returncode == :XTOL_REACHED
-    #end
+    @testset "Simplices in a simplex eps apart are converged" begin
+      dim = 2
+      T = Float64
+      U = ComplexF64
+      v1 = Vertex([one(T), one(T)], rand(U))
+      v2 = Vertex([one(T), one(T) + eps(T)], rand(U))
+      v3 = Vertex([one(T) + eps(T), one(T)], rand(U))
+      s = Simplex([v1, v2, v3])
+      defaults = WindingNelderMead.convergenceconfig(dim, T)
+      returncode = assessconvergence(s, defaults)
+      @test returncode == :XTOL_REACHED
+    end
 
-    #@testset "Simplices in a chain eps apart are converged" begin
-    #  dim = 2
-    #  T = Float64
-    #  U = ComplexF64
-    #  v1 = Vertex([one(T), one(T)], rand(U))
-    #  v2 = Vertex([one(T), one(T) + eps(T)], rand(U))
-    #  v3 = Vertex([one(T), one(T) + eps(T) + eps(T)], rand(U))
-    #  s = Simplex([v1, v2, v3])
-    #  defaults = WindingNelderMead.convergenceconfig(dim, T)
-    #  isconverged, returncode = assessconvergence(s, defaults)
-    #  @assert all(isapprox(position(v1)[d], position(v2)[d],
-    #                    atol=defaults[:xtol_abs][d],
-    #                    rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
-    #  @assert all(isapprox(position(v2)[d], position(v3)[d],
-    #                    atol=defaults[:xtol_abs][d],
-    #                    rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
-    #  @assert !all(isapprox(position(v1)[d], position(v3)[d],
-    #                    atol=defaults[:xtol_abs][d],
-    #                    rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
-    #  @test isconverged
-    #  @test returncode == :XTOL_REACHED
-    #end
+    @testset "Simplices in a chain eps apart are converged" begin
+      dim = 2
+      T = Float64
+      U = ComplexF64
+      v1 = Vertex([one(T), one(T)], rand(U))
+      v2 = Vertex([one(T), one(T) + eps(T)], rand(U))
+      v3 = Vertex([one(T), one(T) + eps(T) + eps(T)], rand(U))
+      s = Simplex([v1, v2, v3])
+      defaults = WindingNelderMead.convergenceconfig(dim, T)
+      returncode = assessconvergence(s, defaults)
+      @test returncode == :XTOL_REACHED
+      @assert all(isapprox(position(v1)[d], position(v2)[d],
+                        atol=defaults[:xtol_abs][d],
+                        rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
+      @assert all(isapprox(position(v2)[d], position(v3)[d],
+                        atol=defaults[:xtol_abs][d],
+                        rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
+      @assert !all(isapprox(position(v1)[d], position(v3)[d],
+                        atol=defaults[:xtol_abs][d],
+                        rtol=defaults[:xtol_rel][d]) for d ∈ 1:dim)
+      @test returncode == :XTOL_REACHED
+    end
 
   end
 
@@ -115,11 +113,11 @@ using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
         root = rand(ComplexF64)
         objective(x) = mock(x, root)
         solution = WindingNelderMead.optimise(objective, rand(2), rand(2),
-          xtol_abs=xtol_abs)
-        (s, n, reason, its) = solution
-        if reason == :STOPVAL_REACHED
-          @test norm(value(bestvertex(s))) <= defaults[:stopval]
-        elseif reason == :XTOL_REACHED && n != 0
+          xtol_abs=xtol_abs, xtol_rel = [0, 0])
+        (s, n, returncode, its) = solution
+        if returncode == :STOPVAL_REACHED
+          @test abs(value(bestvertex(s))) <= defaults[:stopval]
+        elseif returncode == :XTOL_REACHED && n != 0
           @test isapprox(bestvertex(s).position[1], real(root),
                          rtol=defaults[:xtol_rel][1], atol=xtol_abs)
           @test isapprox(bestvertex(s).position[2], imag(root),
@@ -131,16 +129,11 @@ using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
     end
   end
 
-  #@testset "check errors are caught" begin
-  #  @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [1.0],
-  #                                                              [1, 2])
-  #  @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [1.0],
-  #                                                              [0])
-  #  @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [0.0],
-  #                                                              [1])
-  #  @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0, 0.0],
-  #    [1.0, 1.0], [2, 2], xtol_abs=0.0, xtol_rel=0.0)
-  #end
+  @testset "check errors are caught" begin
+    @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [0.0])
+    @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [1.0,
+                                                                         2.0])
+  end
 
 end
 

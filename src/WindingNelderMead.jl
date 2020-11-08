@@ -122,8 +122,9 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
         if any(h->isequal(h, reflected), history)
           if nballoons < config[:balloon_limit]
             balloon!(s)
+            returncode = assessconvergence(s, config)
             nballoons += 1
-            continue
+            returncode == :CONTINUE || break
           else
             returncode = :ENDLESS_NELDERMEAD_LOOP
             break

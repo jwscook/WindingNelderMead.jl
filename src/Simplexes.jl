@@ -50,7 +50,6 @@ import Base: length, iterate, push!, iterate, getindex
 import Base: eachindex, sort!, hash
 Base.length(s::Simplex) = length(s.vertices)
 function Base.push!(s::Simplex, v::Vertex)
-  @assert !any(isequal(x, v) for x in s.vertices)
   push!(s.vertices, v)
   l = length(s.vertices)
   s.perm[1:l] .= sortperm(s.vertices, by=x->abs(value(x)))
@@ -85,6 +84,7 @@ end
 centre(s::Simplex) = mapreduce(v->position(v), +, s) / length(s)
 
 function swap!(s::Simplex, this::Vertex, forthat::Vertex)
+  before = deepcopy(s)
   @assert this ∈ s.vertices
   lengthbefore = length(s)
   remove!(s, this)

@@ -2,9 +2,9 @@ struct Simplex{T<:Number, U}
   vertices::Vector{Vertex{T,U}}
   perm::Vector{Int}
   function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U}
-    sort!(vertices, by=v->angle(value(v)))
-    perm = sortperm(vertices, by=x->abs(value(x)))
-    return new{T,U}(vertices, perm)
+    output = new{T,U}(vertices, zeros(Int64, length(vertices)))
+    sort!(output)
+    return output
   end
 end
 
@@ -52,13 +52,21 @@ Base.length(s::Simplex) = length(s.vertices)
 function Base.push!(s::Simplex, v::Vertex)
   push!(s.vertices, v)
   l = length(s.vertices)
-  s.perm[1:l] .= sortperm(s.vertices, by=x->abs(value(x)))
   return nothing
 end
 Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
-Base.sort!(s::Simplex; kwargs...) = sort!(s.vertices; kwargs...)
+function Base.sort!(s::Simplex)
+  sort!(s.vertices, by=v->angle(value(v)))
+  try
+  s.perm .= sortperm(s.vertices, by=x->abs(value(x)))
+catch
+  @show length(s.perm), length(s.vertices)
+end
+  return nothing
+end
+
 Base.hash(s::Simplex) = hash(s, hash(:Simplex))
 Base.hash(s::Simplex, h::UInt64) = hash(hash.(s), h)
 
@@ -67,7 +75,6 @@ dimensionality(s::Simplex) = length(s) - 1
 remove!(s::Simplex, v::Vertex) = filter!(x -> !isequal(x, v), s.vertices)
 remove!(s::Simplex, x::Vector) = deleteat!(s.vertices, x)
 
-sortbyangle!(s::Simplex) = sort!(s, by=v->angle(value(v)))
 issortedbyangle(s::Simplex) = issorted(s, by=v->angle(value(v)))
 
 sortabs(s, index) = s.vertices[s.perm[index]]
@@ -91,7 +98,7 @@ function swap!(s::Simplex, this::Vertex, forthat::Vertex)
   @assert length(s) == lengthbefore - 1 "$(length(s)), $lengthbefore"
   push!(s, forthat)
   @assert forthat ∈ s.vertices
-  sortbyangle!(s)
+  sort!(s)
   @assert length(s) == lengthbefore
   return nothing
 end

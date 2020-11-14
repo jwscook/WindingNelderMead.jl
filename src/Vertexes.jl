@@ -6,7 +6,7 @@ Vertex(x::AbstractVector{T}, f::F) where {T, F<:Function} = Vertex(x, f(x))
 
 value(v::Vertex) = v.value
 position(v::Vertex) = v.position
-newposition(a::Vertex, ϵ::Number, b::Vertex) = a + ϵ * (a - b)
+newposition(a::Vertex, ϵ, b::Vertex) = a + ϵ .* (a - b)
 
 # must explicitly use <= and >= because == can't overridden and will
 # be used in conjunction with < to create a <=

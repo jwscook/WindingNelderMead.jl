@@ -35,18 +35,18 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   ftol_rel = get(kwargs, :ftol_rel, eps(real(T)))
   stopval = get(kwargs, :stopval, eps(real(T)))
   maxiters = get(kwargs, :maxiters, 1000)
-  balloon_limit = get(kwargs, :balloon_limit, 10)
+  balloon_limit = get(kwargs, :balloon_limit, 0)
 
-  α = get(kwargs, :α, 1)
-  β = get(kwargs, :β, 0.5)
-  γ = get(kwargs, :γ, 2)
-  δ = get(kwargs, :δ, 0.5)
-  ϵ = get(kwargs, :ϵ, 20)
-  α >= 0 || error(ArgumentError("$α >= 0"))
-  0 <= β < 1 || error(ArgumentError("0 <= $β < 1"))
-  γ > 1 || error(ArgumentError("$γ > 1"))
-  γ > α || error(ArgumentError("$γ > $α"))
-  ϵ > 0 || error(ArgumentError("$ϵ > 0"))
+  α = get(kwargs, :α, 1.0) .* ones(Bool, dim)
+  β = get(kwargs, :β, 0.5) .* ones(Bool, dim)
+  γ = get(kwargs, :γ, 2.0) .* ones(Bool, dim)
+  δ = get(kwargs, :δ, 0.5) .* ones(Bool, dim)
+  ϵ = get(kwargs, :ϵ, 10.0) .* ones(Bool, dim)
+  all(α .>= 0) || error(ArgumentError("$α >= 0"))
+  all(0 .<= β .< 1) || error(ArgumentError("0 <= $β < 1"))
+  all(γ .> 1) || error(ArgumentError("$γ > 1"))
+  all(γ .> α) || error(ArgumentError("$γ > $α"))
+  all(ϵ .> 0) || error(ArgumentError("$ϵ > 0"))
   if any(iszero.(xtol_rel) .& iszero.(xtol_abs))
     throw(ArgumentError("xtol_rel .& xtol_abs must not contain zeros"))
   end
@@ -55,7 +55,6 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
           balloon_limit=balloon_limit, maxiters=maxiters,
           α=α, β=β, γ=γ, δ=δ, ϵ=ϵ)
 end
-
 
 """
     optimise(f, s; kwargs...)
@@ -98,8 +97,8 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
     newvertices = [shrink(vertex, v) for v ∈ s if !isequal(v, vertex)]
     remove!(s, findall(v->!isequal(v, vertex), s.vertices))
     map(nv->push!(s, nv), newvertices)
-    sort!(s, by=v->abs(value(v)))
     @assert length(s) == lengthbefore
+    sort!(s)
     return nothing
   end
   shrink!(s::Simplex) = mutate!(s, shrink, bestvertex(s))
@@ -108,6 +107,7 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   iters, totaltime, nballoons = 0, 0.0, 0
   returncode = assessconvergence(s, config)
   history = deepcopy(s.vertices)
+
   while returncode == :CONTINUE && totaltime < config[:timelimit]
     totaltime += @elapsed begin
       (iters += 1) < config[:maxiters] || break
@@ -146,6 +146,15 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
           contracted = contract(centroid, worst)
           contracted < worst ? swapworst!(s, contracted) : shrink!(s)
         end
+
+#        newbest = bestvertex(s)
+#        dx = newbest.position .- best.position
+#        n = maximum(dx) - minimum(dx)
+#        dx .= (dx .- minimum(dx)) / (iszero(n) ? one(n) : n) .+ 0.5
+#        config[:α] .= clamp.(config[:α] .+ dx, 0.1, 4.0)
+#        config[:β] .= clamp.(config[:β] .+ dx, 0.1, 0.9) 
+#        config[:δ] .= clamp.(config[:δ] .+ dx, 0.1, 0.9)
+#        config[:γ] .= clamp.(config[:γ] .+ dx, 0.1, 4.0)
       else
         keeper = closestomiddlevertex(s)
         centroid = Vertex(centroidposition(s, keeper), f)

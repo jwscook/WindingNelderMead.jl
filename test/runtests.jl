@@ -1,6 +1,7 @@
 using Random, Test, WindingNelderMead
 using WindingNelderMead: Vertex, Simplex, windingnumber, windingangle
-using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
+using WindingNelderMead: centre, assessconvergence, position, value
+using WindingNelderMead: bestvertex, issortedbyangle
 
 @testset "WindingNelderMead tests" begin
 
@@ -98,34 +99,71 @@ using WindingNelderMead: centre, assessconvergence, position, value, bestvertex
       @test returncode == :XTOL_REACHED
     end
 
+    @testset "Simplices vertices are in order" begin
+      for _ ∈ 1:10
+        dim = 2
+        T = Float64
+        U = ComplexF64
+        v1 = Vertex(rand(dim), rand(U))
+        v2 = Vertex(rand(dim), rand(U))
+        v3 = Vertex(rand(dim), rand(U))
+        s = Simplex([v1, v2, v3])
+        p = s.perm
+        @test abs(value(s[p[1]])) < abs(value(s[p[2]]))
+        @test abs(value(s[p[2]])) < abs(value(s[p[3]]))
+        @test issortedbyangle(s)
+      end
+    end
+
   end
 
   @testset "End-to-end tests roots" begin
-
     defaults = WindingNelderMead.convergenceconfig(2, Float64)
-    #isconverged, returncode = assessconvergence(s, defaults)
     @testset "Single root" begin
-      for i in 1:10
-        xtol_abs=10.0^(-rand(3:15))
-        function mock(x::Vector, root)
-          return (x[1] + im * x[2]) - root
-        end
+      totalits= 0
+      for _ in 1:1000
+        stopval=10.0^(-rand(3:14))
         root = rand(ComplexF64)
-        objective(x) = mock(x, root)
-        solution = WindingNelderMead.optimise(objective, rand(2), rand(2),
-          xtol_abs=xtol_abs, xtol_rel = [0, 0])
+        objective(x) = (x[1] + im * x[2]) - root
+        ics = rand(2)
+        sizes = rand(2) / 10
+        solution = WindingNelderMead.optimise(x -> x[1] + im * x[2] - root,
+          ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
+        totalits+= its
         if returncode == :STOPVAL_REACHED
-          @test abs(value(bestvertex(s))) <= defaults[:stopval]
+          @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0
           @test isapprox(bestvertex(s).position[1], real(root),
-                         rtol=defaults[:xtol_rel][1], atol=xtol_abs)
+                         rtol=defaults[:xtol_rel][1], atol=defualts[:xtol_abs][1])
           @test isapprox(bestvertex(s).position[2], imag(root),
-                         rtol=defaults[:xtol_rel][2], atol=xtol_abs)
+                         rtol=defaults[:xtol_rel][2], atol=defaults[:xtol_abs][1])
         else
-          continue
+          @test false
         end
       end
+    end
+  end
+
+  @testset "unittest 1" begin
+    defaults = WindingNelderMead.convergenceconfig(2, Float64)
+    (root, stopval, ics, sizes) = (0.9266219999309768 + 0.7854086758392804im, 1.0e-12, [0.1563639702460078, 0.8403436031429723], [0.0035266489474599094, 0.8706954808674581])
+    history = []
+    function objective(x::Vector)
+      push!(history, x)
+      return (x[1] + im * x[2]) - root
+    end
+    solution = WindingNelderMead.optimise(objective, ics, sizes, stopval=stopval)
+    (s, n, returncode, its) = solution
+    if returncode == :STOPVAL_REACHED
+      @test abs(value(bestvertex(s))) <= stopval
+    elseif returncode == :XTOL_REACHED && n != 0
+      @test isapprox(bestvertex(s).position[1], real(root),
+                     rtol=defaults[:xtol_rel][1], atol=defualts[:xtol_abs][1])
+      @test isapprox(bestvertex(s).position[2], imag(root),
+                     rtol=defaults[:xtol_rel][2], atol=defaults[:xtol_abs][2])
+    else
+      @test false
     end
   end
 

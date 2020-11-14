@@ -35,7 +35,6 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   ftol_rel = get(kwargs, :ftol_rel, eps(real(T)))
   stopval = get(kwargs, :stopval, eps(real(T)))
   maxiters = get(kwargs, :maxiters, 1000)
-  balloon_limit = get(kwargs, :balloon_limit, 0)
 
   α = get(kwargs, :α, 1.0) .* ones(Bool, dim)
   β = get(kwargs, :β, 0.5) .* ones(Bool, dim)
@@ -52,8 +51,7 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   end
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          balloon_limit=balloon_limit, maxiters=maxiters,
-          α=α, β=β, γ=γ, δ=δ, ϵ=ϵ)
+          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ, ϵ=ϵ)
 end
 
 """
@@ -90,7 +88,6 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   expand(this, other) = Vertex(newposition(this, -config[:γ], other), f)
   contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
-  balloon(this, other) = Vertex(newposition(this, -config[:ϵ], other), f)
 
   function mutate!(s::Simplex, op::V, vertex::Vertex) where {V}
     lengthbefore = length(s)
@@ -102,9 +99,8 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
     return nothing
   end
   shrink!(s::Simplex) = mutate!(s, shrink, bestvertex(s))
-  balloon!(s::Simplex) = mutate!(s, balloon, Vertex(centre(s), f))
 
-  iters, totaltime, nballoons = 0, 0.0, 0
+  iters, totaltime = 0, 0.0
   returncode = assessconvergence(s, config)
   history = deepcopy(s.vertices)
 
@@ -120,15 +116,8 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
         reflected = reflect(centroid, worst)
 
         if any(h->isequal(h, reflected), history)
-          if nballoons < config[:balloon_limit]
-            balloon!(s)
-            returncode = assessconvergence(s, config)
-            nballoons += 1
-            returncode == :CONTINUE || break
-          else
-            returncode = :ENDLESS_NELDERMEAD_LOOP
-            break
-          end
+          returncode = :ENDLESS_NELDERMEAD_LOOP
+          break
         end
         history .= circshift(history, 1)
         history[1] = reflected

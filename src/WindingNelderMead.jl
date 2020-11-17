@@ -1,5 +1,7 @@
 module WindingNelderMead
 
+using LinearAlgebra
+
 include("Vertexes.jl")
 include("Simplexes.jl")
 
@@ -40,18 +42,24 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   β = get(kwargs, :β, 0.5) .* ones(Bool, dim)
   γ = get(kwargs, :γ, 2.0) .* ones(Bool, dim)
   δ = get(kwargs, :δ, 0.5) .* ones(Bool, dim)
-  ϵ = get(kwargs, :ϵ, 10.0) .* ones(Bool, dim)
   all(α .>= 0) || error(ArgumentError("$α >= 0"))
   all(0 .<= β .< 1) || error(ArgumentError("0 <= $β < 1"))
   all(γ .> 1) || error(ArgumentError("$γ > 1"))
   all(γ .> α) || error(ArgumentError("$γ > $α"))
-  all(ϵ .> 0) || error(ArgumentError("$ϵ > 0"))
-  if any(iszero.(xtol_rel) .& iszero.(xtol_abs))
-    throw(ArgumentError("xtol_rel .& xtol_abs must not contain zeros"))
-  end
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ, ϵ=ϵ)
+          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
+end
+
+function updatehistory!(history, newentry)
+  if any(h->isequal(h, newentry), history)
+    returncode = :ENDLESS_LOOP
+  else
+    returncode = :CONTINUE
+  end
+  history .= circshift(history, 1)
+  history[1] = newentry
+  return returncode
 end
 
 """
@@ -78,7 +86,6 @@ algorithm
 -  β (default 0.5): Contraction factor
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
--  ϵ (default 20): Balooning factor
 """
 function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real, U}
 
@@ -89,9 +96,9 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
 
-  function mutate!(s::Simplex, op::V, vertex::Vertex) where {V}
+  function mutate!(s::Simplex, op::V, vertex) where {V}
     lengthbefore = length(s)
-    newvertices = [shrink(vertex, v) for v ∈ s if !isequal(v, vertex)]
+    newvertices = [op(vertex, v) for v ∈ s if !isequal(v, vertex)]
     remove!(s, findall(v->!isequal(v, vertex), s.vertices))
     map(nv->push!(s, nv), newvertices)
     @assert length(s) == lengthbefore
@@ -104,23 +111,21 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   returncode = assessconvergence(s, config)
   history = deepcopy(s.vertices)
 
+  windings = windingnumber(s)
+
   while returncode == :CONTINUE && totaltime < config[:timelimit]
     totaltime += @elapsed begin
       (iters += 1) < config[:maxiters] || break
 
-      if windingnumber(s) == 0
+      if windings == 0
         best = bestvertex(s)
         worst = worstvertex(s)
         secondworst = secondworstvertex(s)
         centroid = Vertex(centroidposition(s), f)
         reflected = reflect(centroid, worst)
 
-        if any(h->isequal(h, reflected), history)
-          returncode = :ENDLESS_NELDERMEAD_LOOP
-          break
-        end
-        history .= circshift(history, 1)
-        history[1] = reflected
+        returncode = updatehistory!(history, reflected)
+        returncode == :ENDLESS_LOOP && break
 
         if best <= reflected < secondworst
           swapworst!(s, reflected)
@@ -136,24 +141,23 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
           contracted < worst ? swapworst!(s, contracted) : shrink!(s)
         end
 
-#        newbest = bestvertex(s)
-#        dx = newbest.position .- best.position
-#        n = maximum(dx) - minimum(dx)
-#        dx .= (dx .- minimum(dx)) / (iszero(n) ? one(n) : n) .+ 0.5
-#        config[:α] .= clamp.(config[:α] .+ dx, 0.1, 4.0)
-#        config[:β] .= clamp.(config[:β] .+ dx, 0.1, 0.9) 
-#        config[:δ] .= clamp.(config[:δ] .+ dx, 0.1, 0.9)
-#        config[:γ] .= clamp.(config[:γ] .+ dx, 0.1, 4.0)
+        windings = windingnumber(s)
       else
         keeper = closestomiddlevertex(s)
         centroid = Vertex(centroidposition(s, keeper), f)
         any(isequal(centroid, v) for v in s) && continue
+        rootlostandsimplexunchanged = true
         for vertex ∈ s
           isequal(vertex, keeper) && continue
           swap!(s, vertex, centroid)
-          windingnumber(s) == 0 || break
+          windingnumber(s) == 0 || (rootlostandsimplexunchanged = false; break)
           swap!(s, centroid, vertex)
         end
+
+        returncode = updatehistory!(history, centroid)
+        returncode == :ENDLESS_LOOP && break
+
+        windings = rootlostandsimplexunchanged ? 0 : windingnumber(s)
       end
       returncode = assessconvergence(s, config)
     end

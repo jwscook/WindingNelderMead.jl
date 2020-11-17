@@ -47,7 +47,7 @@ end
 
 
 import Base: length, iterate, push!, iterate, getindex
-import Base: eachindex, sort!, hash
+import Base: eachindex, sort!, hash, extrema
 Base.length(s::Simplex) = length(s.vertices)
 function Base.push!(s::Simplex, v::Vertex)
   push!(s.vertices, v)
@@ -65,6 +65,10 @@ end
 
 Base.hash(s::Simplex) = hash(s, hash(:Simplex))
 Base.hash(s::Simplex, h::UInt64) = hash(hash.(s), h)
+
+function Base.extrema(s::Simplex)
+  return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
+end
 
 dimensionality(s::Simplex) = length(s) - 1
 
@@ -85,6 +89,12 @@ function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
 end
 
 centre(s::Simplex) = mapreduce(v->position(v), +, s) / length(s)
+
+function hypervolume(s::Simplex)
+  m = hcat((vcat(position(v), 1) for v in s)...)
+  d = dimensionality(s)
+  return abs(det(m)) / factorial(d)
+end
 
 function swap!(s::Simplex, this::Vertex, forthat::Vertex)
   before = deepcopy(s)

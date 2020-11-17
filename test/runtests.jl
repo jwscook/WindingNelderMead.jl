@@ -1,7 +1,7 @@
 using Random, Test, WindingNelderMead
 using WindingNelderMead: Vertex, Simplex, windingnumber, windingangle
 using WindingNelderMead: centre, assessconvergence, position, value
-using WindingNelderMead: bestvertex, issortedbyangle
+using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
 
 @testset "WindingNelderMead tests" begin
 
@@ -113,6 +113,32 @@ using WindingNelderMead: bestvertex, issortedbyangle
         @test abs(value(s[p[2]])) < abs(value(s[p[3]]))
         @test issortedbyangle(s)
       end
+    end
+
+    @testset "centres" begin
+      v1 = Vertex([0.0, 0.0], one(ComplexF64))
+      v2 = Vertex([1.0, 0.0], one(ComplexF64))
+      v3 = Vertex([0.0, 1.0], one(ComplexF64))
+      s = Simplex([v1, v2, v3])
+      @test all(centre(s) .== [1/3, 1/3])
+    end
+
+    @testset "hypervolumes" begin
+      x0 = rand(2)
+      a, b = rand(2)
+      v1 = Vertex(x0 .+ [0.0, 0.0], one(ComplexF64))
+      v2 = Vertex(x0 .+ [a, 0.0], one(ComplexF64))
+      v3 = Vertex(x0 .+ [0.0, b], one(ComplexF64))
+      s = Simplex([v1, v2, v3])
+      @test hypervolume(s) ≈ (a * b) / 2
+      x0 = rand(3)
+      a, b, c = rand(3)
+      v1 = Vertex(x0 .+ [0, 0, 0], one(ComplexF64))
+      v2 = Vertex(x0 .+ [a, 0, 0], one(ComplexF64))
+      v3 = Vertex(x0 .+ [0, b, 0], one(ComplexF64))
+      v4 = Vertex(x0 .+ [0, 0, c], one(ComplexF64))
+      s = Simplex([v1, v2, v3, v4])
+      @test hypervolume(s) ≈ (a * b * c) / 6
     end
 
   end

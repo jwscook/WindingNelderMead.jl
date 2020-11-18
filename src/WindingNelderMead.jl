@@ -96,16 +96,16 @@ function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real,
   contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
 
-  function mutate!(s::Simplex, op::V, vertex) where {V}
+  function shrink!(s::Simplex)
+    ignore = bestvertex(s)
     lengthbefore = length(s)
-    newvertices = [op(vertex, v) for v ∈ s if !isequal(v, vertex)]
-    remove!(s, findall(v->!isequal(v, vertex), s.vertices))
+    newvertices = [shrink(ignore, v) for v ∈ s if !isequal(v, ignore)]
+    remove!(s, findall(v->!isequal(v, ignore), s.vertices))
     map(nv->push!(s, nv), newvertices)
     @assert length(s) == lengthbefore
     sort!(s)
     return nothing
   end
-  shrink!(s::Simplex) = mutate!(s, shrink, bestvertex(s))
 
   iters, totaltime = 0, 0.0
   returncode = assessconvergence(s, config)

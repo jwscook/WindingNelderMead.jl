@@ -76,7 +76,6 @@ function hypervolume(s::Simplex)
 end
 
 function swap!(s::Simplex, this::Vertex, forthat::Vertex)
-  before = deepcopy(s)
   @assert this ∈ s.vertices
   lengthbefore = length(s)
   remove!(s, this)

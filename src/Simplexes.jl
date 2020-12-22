@@ -1,7 +1,7 @@
-struct Simplex{T<:Number, U}
+struct Simplex{T<:Number, U<:Complex}
   vertices::Vector{Vertex{T,U}}
   permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U}
+  function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U<:Complex}
     output = new{T,U}(vertices, zeros(Int64, length(vertices)))
     sort!(output)
     return output
@@ -9,39 +9,21 @@ struct Simplex{T<:Number, U}
 end
 
 function Simplex(f::T, ic::AbstractVector{U}, initial_step::Number
-    ) where {T<:Function, U<:Number}
-  return Simplex(f, ic, initial_step .+ zeros(Bool, ic))
+    ) where {T, U<:Number}
+  return Simplex(f, ic, initial_step .+ zeros(Bool, length(ic)))
 end
 
-function Simplex(f::T, ic::AbstractVector{U}, initial_step::AbstractVector{V}
-    ) where {T<:Function, U<:Number, V<:Number}
-  if any(iszero.(initial_step))
-    throw(ArgumentError("initial_step, $initial_step  must not have any zero
-                        values"))
-  end
-  if length(ic) != length(initial_step)
-    throw(ArgumentError("ic, $ic must be same length as initial_step
-                        $initial_step"))
-  end
-  dim = length(ic)
-  positions = Vector{Vector{promote_type(U,V)}}()
-  for i ∈ 1:dim+1
-    x = [ic[j] + ((j == i) ? initial_step[j] : zero(V)) for j ∈ 1:dim]
-    push!(positions, x)
-  end
-  return Simplex(f, positions)
+function Simplex(f::T, ic::AbstractVector{U}, initial_steps::AbstractVector{V}
+    ) where {T, U<:Number, V<:Number}
+  return Simplex(f, vertexpositions(ic, initial_steps))
 end
 function Simplex(f::T, positions::U
-    ) where {T<:Function, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
+    ) where {T, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
   if length(unique(length.(positions))) != 1
     throw(ArgumentError("All entries in positions $positions must be the same
                         length"))
   end
-  dim = length(positions) - 1
-  vertex = Vertex(positions[1], f(positions[1]))
-  vertices = Vector{typeof(vertex)}()
-  push!(vertices, vertex)
-  map(i->push!(vertices, Vertex(positions[i], f(positions[i]))), 2:dim+1)
+  vertices = [Vertex(p, f(p)) for p in positions]
   return Simplex(vertices)
 end
 
@@ -62,9 +44,6 @@ function Base.sort!(s::Simplex)
   sortperm!(s.permabs, s.vertices, by=x->abs(value(x)))
   return nothing
 end
-
-Base.hash(s::Simplex) = hash(s, hash(:Simplex))
-Base.hash(s::Simplex, h::UInt64) = hash(hash.(s), h)
 
 function Base.extrema(s::Simplex)
   return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
@@ -131,9 +110,9 @@ function assessconvergence(simplex, config)
     connectedto = Set{Int}()
     for (qi, q) ∈ enumerate(simplex)
       thisxtol = true
-      for (i, (pv, pq)) ∈ enumerate(zip(position(v), position(q)))
-        thisxtol &= isapprox(pv, pq, rtol=config[:xtol_rel][i],
-                                     atol=config[:xtol_abs][i])
+      @inbounds for i ∈ 1:dimensionality(simplex)
+        thisxtol &= isapprox(position(v)[i], position(q)[i],
+          rtol=config[:xtol_rel][i], atol=config[:xtol_abs][i])
       end
       thisxtol && push!(connectedto, qi)
       thisxtol && for i in connectedto if i ∉ processed push!(toprocess, i) end end

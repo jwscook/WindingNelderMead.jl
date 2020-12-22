@@ -1,12 +1,33 @@
-struct Vertex{T, U}
+struct Vertex{T, U<:Complex}
   position::AbstractVector{T}
   value::U
 end
-Vertex(x::AbstractVector{T}, f::F) where {T, F<:Function} = Vertex(x, f(x))
+Vertex(x::AbstractVector{T}, f::F) where {T, F} = Vertex(x, f(x))
 
 value(v::Vertex) = v.value
 position(v::Vertex) = v.position
 newposition(a, ϵ, b) = a + ϵ .* (a - b)
+
+
+function vertexpositions(ic::AbstractVector{T}, initial_steps::AbstractVector{U}
+    ) where {T<:Number, U<:Number}
+  if any(iszero.(initial_steps))
+    throw(ArgumentError("initial_steps, $initial_steps  must not have any zero
+                        values"))
+  end
+  if length(ic) != length(initial_steps)
+    throw(ArgumentError("ic, $ic must be same length as initial_steps
+                        $initial_steps"))
+  end
+  dim = length(ic)
+  positions = Vector{Vector{promote_type(T,U)}}()
+  for i ∈ 1:dim+1
+    x = [ic[j] + ((j == i) ? initial_steps[j] : zero(U)) for j ∈ 1:dim]
+    push!(positions, x)
+  end
+  return positions
+end
+
 
 # must explicitly use <= and >= because == can't overridden and will
 # be used in conjunction with < to create a <=
@@ -16,15 +37,11 @@ Base.:<=(a::Vertex, b::Vertex) = abs(value(a)) <= abs(value(b))
 Base.:>=(a::Vertex, b::Vertex) = abs(value(a)) >= abs(value(b))
 Base.:+(a::Vertex, b) = position(a) .+ b
 Base.:-(a::Vertex, b::Vertex) = position(a) .- position(b)
-Base.:-(a, b::Vertex) = a .- position(b)
 function Base.isequal(a::Vertex, b::Vertex)
   values_equal = value(a) == value(b) || (isnan(a) && isnan(b))
-  positions_equal = all(position(a) .== position(b))
+  positions_equal = position(a) == position(b)
   return values_equal && positions_equal
 end
-Base.isequal(a::Vertex, b::AbstractVector) = all(position(a) .== b)
 
 Base.isnan(a::Vertex) = isnan(value(a))
-Base.hash(v::Vertex) = hash(v, hash(:Vertex))
-Base.hash(v::Vertex, h::UInt64) = hash(hash.(v.position), hash(v.value, h))
 

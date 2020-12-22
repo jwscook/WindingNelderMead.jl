@@ -12,7 +12,7 @@ Find minimum of function, `f`, first creating a Simplex from vertices at
 `initial_vertex_positions`, and options passed in via kwargs.
 """
 function optimise(f::T, initial_vertex_positions::U; kwargs...
-   ) where {T<:Function, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
+   ) where {T, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
   return optimise(f, Simplex(f, initial_vertex_positions); kwargs...)
 end
 
@@ -24,8 +24,8 @@ vertex position, `initial_position`, and other vertices `initial_step` away from
 that point in all directions, and options passed in via kwargs.
 """
 function optimise(f::T, initial_position::AbstractVector{U}, initial_step;
-                  kwargs...) where {T<:Function, U<:Number, V<:Number}
-  return optimise(f, Simplex(f, initial_position, initial_step); kwargs...)
+                  kwargs...) where {T, U<:Number, V<:Number}
+  return optimise(f, vertexpositions(initial_position, initial_step); kwargs...)
 end
 
 function convergenceconfig(dim::Int, T::Type; kwargs...)
@@ -52,11 +52,7 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
 end
 
 function updatehistory!(history, newentry)
-  if any(h->isequal(h, newentry), history)
-    returncode = :ENDLESS_LOOP
-  else
-    returncode = :CONTINUE
-  end
+  returncode = any(h->isequal(h, newentry), history) ? :ENDLESS_LOOP : :CONTINUE
   history .= circshift(history, 1)
   history[1] = newentry
   return returncode
@@ -87,7 +83,7 @@ algorithm
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
 """
-function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F<:Function, T<:Real, U}
+function optimise(f::F, s::Simplex{T,U}; kwargs...) where {F, T<:Real, U}
 
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 

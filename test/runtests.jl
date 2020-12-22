@@ -123,6 +123,13 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test all(centre(s) .== [1/3, 1/3])
     end
 
+    @testset "extremas" begin
+      s = Simplex(x->im, [1.0, 3.0], 1.0)
+      exs = WindingNelderMead.extrema(s)
+      @test exs[1] == (1.0, 2.0)
+      @test exs[2] == (3.0, 4.0)
+    end
+
     @testset "hypervolumes" begin
       x0 = rand(2)
       a, b = rand(2)
@@ -146,8 +153,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
   @testset "End-to-end tests roots" begin
     defaults = WindingNelderMead.convergenceconfig(2, Float64)
     @testset "Single root" begin
-      totalits= 0
-      for _ in 1:1000
+      for _ in 1:10
         stopval=10.0^(-rand(3:14))
         root = rand(ComplexF64)
         objective(x) = (x[1] + im * x[2]) - root
@@ -156,7 +162,6 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
         solution = WindingNelderMead.optimise(x -> x[1] + im * x[2] - root,
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
-        totalits+= its
         if returncode == :STOPVAL_REACHED
           @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0
@@ -165,6 +170,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
           @test isapprox(bestvertex(s).position[2], imag(root),
                          rtol=defaults[:xtol_rel][2], atol=defaults[:xtol_abs][1])
         else
+          @show stopval, root, ics, sizes, returncode
           @test false
         end
       end
@@ -175,6 +181,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
     @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [0.0])
     @test_throws ArgumentError WindingNelderMead.optimise(x->im, [0.0], [1.0,
                                                                          2.0])
+    @test_throws ArgumentError WindingNelderMead.optimise(x->im, [[0],[1, 2]])
   end
 
 end

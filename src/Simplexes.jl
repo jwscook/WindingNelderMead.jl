@@ -127,7 +127,7 @@ function assessconvergence(simplex, config)
       q = simplex.vertices[qi]
       allftol &= all(isapprox(value(v), value(q),
                               rtol=config[:ftol_rel], atol=config[:ftol_abs]))
-      all(position(v) .== position(q)) && return :XTOL_DEGENERATE_SIMPLEX
+      position(v) == position(q) && return :XTOL_DEGENERATE_SIMPLEX
     end
   end
   allftol && return :FTOL_REACHED

@@ -9,8 +9,8 @@ position(v::Vertex) = v.position
 newposition(a, ϵ, b) = a + ϵ .* (a - b)
 
 
-function vertexpositions(ic::AbstractVector{T}, initial_steps::AbstractVector{U}
-    ) where {T<:Number, U<:Number}
+function vertexpositions(ic::T, initial_steps::AbstractVector{V}
+    ) where {U, T<:AbstractVector{U}, V<:Number}
   if any(iszero.(initial_steps))
     throw(ArgumentError("initial_steps, $initial_steps  must not have any zero
                         values"))
@@ -20,11 +20,8 @@ function vertexpositions(ic::AbstractVector{T}, initial_steps::AbstractVector{U}
                         $initial_steps"))
   end
   dim = length(ic)
-  positions = Vector{Vector{promote_type(T,U)}}()
-  for i ∈ 1:dim+1
-    x = [ic[j] + ((j == i) ? initial_steps[j] : zero(U)) for j ∈ 1:dim]
-    push!(positions, x)
-  end
+  fx(i) = T([ic[j] + (j == i) * initial_steps[j] for j ∈ 1:dim])
+  positions = map(i->fx(i), 1:dim+1)
   return positions
 end
 

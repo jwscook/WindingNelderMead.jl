@@ -1,8 +1,9 @@
-struct Simplex{T<:Number, U<:Complex}
+struct Simplex{T<:Number, U<:Complex, D}
   vertices::Vector{Vertex{T,U}}
   permabs::Vector{Int}
   function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U<:Complex}
-    output = new{T,U}(vertices, zeros(Int64, length(vertices)))
+    D = length(vertices) - 1
+    output = new{T,U,D}(vertices, zeros(Int64, D + 1))
     sort!(output)
     return output
   end
@@ -39,22 +40,33 @@ end
 Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
+
+sortby(s::Simplex{T,U,D}) where {T, U, D} = v->angle(value(v))
+
+function sortby(s::Simplex{T,U,2}) where {T, U}
+  return function output(v)
+    c = centre(s)
+    m = Complex(c[1], c[2])
+    return angle(Complex(position(v)...) - m)
+  end
+end
+
 function Base.sort!(s::Simplex)
-  sort!(s.vertices, by=v->angle(value(v)))
+  sort!(s.vertices, by=sortby(s))
   sortperm!(s.permabs, s.vertices, by=x->abs(value(x)))
   return nothing
 end
+
+issortedbyangle(s::Simplex) = issorted(s, by=sortby(s))
 
 function Base.extrema(s::Simplex)
   return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
 end
 
-dimensionality(s::Simplex) = length(s) - 1
+dimensionality(s::Simplex{T,U,D}) where {T, U, D} = D
 
 remove!(s::Simplex, v::Vertex) = filter!(x -> !isequal(x, v), s.vertices)
 remove!(s::Simplex, x::Vector) = deleteat!(s.vertices, x)
-
-issortedbyangle(s::Simplex) = issorted(s, by=v->angle(value(v)))
 
 selectabs(s, index) = s.vertices[s.permabs[index]]
 

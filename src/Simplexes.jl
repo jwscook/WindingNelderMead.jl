@@ -46,8 +46,8 @@ sortby(s::Simplex{T,U,D}) where {T, U, D} = v->angle(value(v))
 function sortby(s::Simplex{T,U,2}) where {T, U}
   return function output(v)
     c = centre(s)
-    m = Complex(c[1], c[2])
-    return angle(Complex(position(v)...) - m)
+    pv = position(v)
+    return atan(pv[2] - c[2], pv[1] - c[1])
   end
 end
 
@@ -103,7 +103,7 @@ swapworst!(s::Simplex, forthis::Vertex) = swap!(s, worstvertex(s), forthis)
 
 function closestomiddlevertex(s::Simplex)
   mid = mapreduce(position, +, s) ./ length(s)
-  _, index = findmin(map(v->sum((position(v) - mid).^2), s))
+  _, index = findmin(map(v->sum(abs2, position(v) - mid), s))
   return s[index]
 end
 
@@ -115,15 +115,19 @@ function assessconvergence(simplex, config)
 
   toprocess = Set{Int}(1)
   processed = Set{Int}()
+  connectedto = Set{Int}()
   while !isempty(toprocess)
     vi = pop!(toprocess)
     v = simplex.vertices[vi]
-    connectedto = Set{Int}()
+    pv = position(v)
+    empty!(connectedto)
     for (qi, q) ∈ enumerate(simplex)
       thisxtol = true
+      pq = position(q)
       @inbounds for i ∈ 1:dimensionality(simplex)
-        thisxtol &= isapprox(position(v)[i], position(q)[i],
+        thisxtol &= isapprox(pv[i], pq[i],
           rtol=config[:xtol_rel][i], atol=config[:xtol_abs][i])
+        thisxtol || break
       end
       thisxtol && push!(connectedto, qi)
       thisxtol && for i in connectedto if i ∉ processed push!(toprocess, i) end end

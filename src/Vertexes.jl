@@ -11,7 +11,7 @@ newposition(a, ϵ, b) = a + ϵ .* (a - b)
 
 function vertexpositions(ic::T, initial_steps::AbstractVector{V}
     ) where {U, T<:AbstractVector{U}, V<:Number}
-  if any(iszero.(initial_steps))
+  if any(iszero, initial_steps)
     throw(ArgumentError("initial_steps, $initial_steps  must not have any zero
                         values"))
   end

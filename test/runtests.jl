@@ -148,6 +148,26 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test hypervolume(s) ≈ (a * b * c) / 6
     end
 
+    @testset "atan gives same as angle for sortby" begin
+      v1 = Vertex([0.0, 0.0], one(ComplexF64))
+      v2 = Vertex([1.0, 0.0], one(ComplexF64))
+      v3 = Vertex([0.0, 1.0], one(ComplexF64))
+      s = Simplex([v1, v2, v3])
+      c = centre(s)
+      for v in s
+        pv = position(v)
+        a = angle(Complex(pv[1] - c[1], pv[2] - c[2]))
+        @test a == WindingNelderMead.sortby(s)(v)
+      end
+    end
+
+    @testset "pole has winding number -1 in 2D" begin
+      objective(x) = 1 / (x[1] + im * x[2])
+      ps = ([-1.0, -1.0], [1.0, -1.0], [0.0, 1.0])
+      s = Simplex([Vertex(p, objective(p)) for p in ps])
+      @test windingnumber(s) == -1
+    end
+
   end
 
   @testset "End-to-end tests roots" begin
@@ -162,6 +182,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
         solution = WindingNelderMead.optimise(x -> x[1] + im * x[2] - root,
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
+        @test n == 1
         if returncode == :STOPVAL_REACHED
           @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0

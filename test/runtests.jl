@@ -149,9 +149,9 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
     end
 
     @testset "atan gives same as angle for sortby" begin
-      v1 = Vertex([0.0, 0.0], one(ComplexF64))
-      v2 = Vertex([1.0, 0.0], one(ComplexF64))
-      v3 = Vertex([0.0, 1.0], one(ComplexF64))
+      v1 = Vertex([0.0, 0.0], rand(ComplexF64))
+      v2 = Vertex([1.0, 0.0], rand(ComplexF64))
+      v3 = Vertex([0.0, 1.0], rand(ComplexF64))
       s = Simplex([v1, v2, v3])
       c = centre(s)
       for v in s
@@ -161,10 +161,13 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       end
     end
 
-    @testset "pole has winding number -1 in 2D" begin
-      objective(x) = 1 / (x[1] + im * x[2])
+    @testset "root (pole) has winding number 1 (-1) in 2D" begin
+      objective(x) = (x[1] + im * x[2])
       ps = ([-1.0, -1.0], [1.0, -1.0], [0.0, 1.0])
       s = Simplex([Vertex(p, objective(p)) for p in ps])
+      @test windingnumber(s) == 1
+      invobjective(x) = 1 / objective(x)
+      s = Simplex([Vertex(p, invobjective(p)) for p in ps])
       @test windingnumber(s) == -1
     end
 

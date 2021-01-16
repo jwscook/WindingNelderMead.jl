@@ -79,7 +79,7 @@ function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   return mapreduce(g, +, s) / (length(s) - 1)
 end
 
-centre(s::Simplex) = mapreduce(v->position(v), +, s) / length(s)
+centre(s::Simplex) = mapreduce(position, +, s) / length(s)
 
 function hypervolume(s::Simplex)
   m = hcat((vcat(position(v), 1) for v in s)...)

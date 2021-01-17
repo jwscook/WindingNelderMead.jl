@@ -151,9 +151,9 @@ function assessconvergence(simplex, config)
   return :CONTINUE
 end
 
-function _πtoπ(ϕ)
-  ϕ < -π && return _πtoπ(ϕ + 2π)
-  ϕ > π && return _πtoπ(ϕ - 2π)
+function _πtoπ(ϕ::T) where {T}
+  ϕ < -T(π) && return _πtoπ(ϕ + 2π)
+  ϕ >= T(π) && return _πtoπ(ϕ - 2π)
   return ϕ
 end
 

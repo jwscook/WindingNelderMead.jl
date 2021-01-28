@@ -1,12 +1,17 @@
-struct Vertex{T, U<:Complex}
-  position::AbstractVector{T}
+struct Vertex{T, U<:Complex, V<:AbstractVector{T}}
+  position::V
   value::U
 end
-Vertex(x::AbstractVector{T}, f::F) where {T, F} = Vertex(x, f(x))
+Vertex(x::AbstractVector, f::F) where {F} = Vertex(x, f(x))
 
 value(v::Vertex) = v.value
 position(v::Vertex) = v.position
-newposition(a, ϵ, b) = a + ϵ .* (a - b)
+Base.getindex(v::Vertex, i) = v.position[i]
+Base.eachindex(v::Vertex) = eachindex(v.position)
+function newposition(a::Vertex{T,U,V}, ϵ, b) where {T,U,V}
+  return V(a + ϵ .* (a - b))
+  #return [a[i] + ϵ[i] * (a[i] - b[i]) for i in eachindex(a)]
+end
 
 
 function vertexpositions(ic::T, initial_steps::AbstractVector{V}
@@ -32,8 +37,14 @@ import Base: isless, +, -, <=, >=, isequal, isnan, hash
 Base.isless(a::Vertex, b::Vertex) = abs(value(a)) < abs(value(b))
 Base.:<=(a::Vertex, b::Vertex) = abs(value(a)) <= abs(value(b))
 Base.:>=(a::Vertex, b::Vertex) = abs(value(a)) >= abs(value(b))
-Base.:+(a::Vertex, b) = position(a) .+ b
-Base.:-(a::Vertex, b::Vertex) = position(a) .- position(b)
+function Base.:+(a::Vertex{T,U,V}, b::AbstractVector) where {T,U,V}
+  p = position(a)
+  return V([p[i] + b[i] for i in eachindex(p)])
+end
+function Base.:-(a::Vertex{T,U,V}, b::Vertex{T,U,V}) where {T,U,V}
+  pa, pb = position(a), position(b)
+  return V([pa[i] - pb[i] for i in eachindex(pa)])
+end
 function Base.isequal(a::Vertex, b::Vertex)
   values_equal = value(a) == value(b) || (isnan(a) && isnan(b))
   positions_equal = position(a) == position(b)

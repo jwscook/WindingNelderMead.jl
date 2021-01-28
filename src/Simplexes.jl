@@ -1,17 +1,17 @@
-struct Simplex{T<:Number, U<:Complex, D}
-  vertices::Vector{Vertex{T,U}}
+struct Simplex{T<:Number,U<:Complex,V,D}
+  vertices::Vector{Vertex{T,U,V}}
   permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U}}) where {T<:Number, U<:Complex}
+  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
     D = length(vertices) - 1
-    output = new{T,U,D}(vertices, zeros(Int64, D + 1))
+    output = new{T,U,V,D}(vertices, zeros(Int64, D + 1))
     sort!(output)
     return output
   end
 end
 
-function Simplex(f::T, ic::AbstractVector{U}, initial_step::Number
-    ) where {T, U<:Number}
-  return Simplex(f, ic, initial_step .+ zeros(Bool, length(ic)))
+function Simplex(f::T, ic::U, initial_step::Number
+    ) where {T, U<:AbstractVector{<:Number}}
+  return Simplex(f, ic, initial_step .+ U(zeros(Bool, length(ic))))
 end
 
 function Simplex(f::T, ic::AbstractVector{U}, initial_steps::AbstractVector{V}
@@ -41,9 +41,9 @@ Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
 
-sortby(s::Simplex{T,U,D}) where {T, U, D} = v->angle(value(v))
+sortby(s::Simplex{T,U,V,D}) where {T,U,V,D} = v->angle(value(v))
 
-function sortby(s::Simplex{T,U,2}) where {T, U}
+function sortby(s::Simplex{T,U,V,2}) where {T,U,V}
   return function output(v)
     c = centre(s)
     pv = position(v)
@@ -63,7 +63,7 @@ function Base.extrema(s::Simplex)
   return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
 end
 
-dimensionality(s::Simplex{T,U,D}) where {T, U, D} = D
+dimensionality(s::Simplex{T,U,V,D}) where {T,U,V,D} = D
 
 remove!(s::Simplex, v::Vertex) = filter!(x -> !isequal(x, v), s.vertices)
 remove!(s::Simplex, x::Vector) = deleteat!(s.vertices, x)

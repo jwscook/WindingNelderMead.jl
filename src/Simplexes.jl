@@ -65,9 +65,6 @@ end
 
 dimensionality(s::Simplex{T,U,V,D}) where {T,U,V,D} = D
 
-remove!(s::Simplex, v::Vertex) = filter!(x -> !isequal(x, v), s.vertices)
-remove!(s::Simplex, x::Vector) = deleteat!(s.vertices, x)
-
 selectabs(s, index) = s.vertices[s.permabs[index]]
 
 bestvertex(s::Simplex) = selectabs(s, 1)
@@ -89,13 +86,8 @@ end
 
 function swap!(s::Simplex, this::Vertex, forthat::Vertex)
   @assert this ∈ s.vertices
-  lengthbefore = length(s)
-  remove!(s, this)
-  @assert length(s) == lengthbefore - 1 "$(length(s)), $lengthbefore"
-  push!(s, forthat)
-  @assert forthat ∈ s.vertices
+  s.vertices[findfirst(x -> isequal(x, this), s.vertices)] = forthat
   sort!(s)
-  @assert length(s) == lengthbefore
   return nothing
 end
 
@@ -115,12 +107,11 @@ function assessconvergence(simplex, config)
 
   toprocess = Set{Int}(1)
   processed = Set{Int}()
-  connectedto = Set{Int}()
   while !isempty(toprocess)
     vi = pop!(toprocess)
     v = simplex.vertices[vi]
     pv = position(v)
-    empty!(connectedto)
+    connectedto = Set{Int}()
     for (qi, q) ∈ enumerate(simplex)
       thisxtol = true
       pq = position(q)

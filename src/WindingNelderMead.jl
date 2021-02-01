@@ -42,10 +42,10 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   β = get(kwargs, :β, 0.5) .* ones(Bool, dim)
   γ = get(kwargs, :γ, 2.0) .* ones(Bool, dim)
   δ = get(kwargs, :δ, 0.5) .* ones(Bool, dim)
-  all(α .>= 0) || error(ArgumentError("$α >= 0"))
-  all(0 .<= β .< 1) || error(ArgumentError("0 <= $β < 1"))
-  all(γ .> 1) || error(ArgumentError("$γ > 1"))
-  all(γ .> α) || error(ArgumentError("$γ > $α"))
+  all(x->x >= 0, α) || error(ArgumentError("$α >= 0"))
+  all(x->0 <= x < 1, β) || error(ArgumentError("0 <= $β < 1"))
+  all(x->x > 1, γ) || error(ArgumentError("$γ > 1"))
+  all(xy->xy[1] > xy[2], zip(γ, β)) || error(ArgumentError("$γ > $α"))
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
           maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
@@ -95,10 +95,9 @@ function optimise(f::F, s::Simplex{T}; kwargs...) where {F, T<:Real}
   function shrink!(s::Simplex)
     ignore = bestvertex(s)
     lengthbefore = length(s)
-    newvertices = [shrink(ignore, v) for v ∈ s if !isequal(v, ignore)]
-    remove!(s, findall(v->!isequal(v, ignore), s.vertices))
-    map(nv->push!(s, nv), newvertices)
-    @assert length(s) == lengthbefore
+    for v ∈ s
+      isequal(v, ignore) || swap!(s, v, shrink(ignore, v))
+    end
     sort!(s)
     return nothing
   end

@@ -10,7 +10,6 @@ Base.getindex(v::Vertex, i) = v.position[i]
 Base.eachindex(v::Vertex) = eachindex(v.position)
 function newposition(a::Vertex{T,U,V}, ϵ, b) where {T,U,V}
   return V(a + ϵ .* (a - b))
-  #return [a[i] + ϵ[i] * (a[i] - b[i]) for i in eachindex(a)]
 end
 
 

@@ -1,12 +1,17 @@
 struct Simplex{T<:Number,U<:Complex,V,D}
   vertices::Vector{Vertex{T,U,V}}
   permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
+  function Simplex(vertices::Vector{Vertex{T,U,V}}, permabs::Vector{Int}
+      ) where {T,U<:Complex,V}
     D = length(vertices) - 1
-    output = new{T,U,V,D}(vertices, zeros(Int64, D + 1))
+    output = new{T,U,V,D}(vertices, permabs)
     sort!(output)
     return output
   end
+end
+
+function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
+  return Simplex(vertices, zeros(Int64, length(vertices)))
 end
 
 function Simplex(f::T, ic::U, initial_step::Number
@@ -29,19 +34,14 @@ function Simplex(f::T, positions::U
 end
 
 
-import Base: length, iterate, push!, iterate, getindex
+import Base: length, iterate, iterate, getindex
 import Base: eachindex, sort!, hash, extrema
-Base.length(s::Simplex) = length(s.vertices)
-function Base.push!(s::Simplex, v::Vertex)
-  push!(s.vertices, v)
-  l = length(s.vertices)
-  return nothing
-end
+Base.length(s::Simplex{T,U,V,D}) where {T,U,V,D} = D + 1
 Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
 
-sortby(s::Simplex{T,U,V,D}) where {T,U,V,D} = v->angle(value(v))
+sortby(s::Simplex) = v->angle(value(v))
 
 function sortby(s::Simplex{T,U,V,2}) where {T,U,V}
   return function output(v)

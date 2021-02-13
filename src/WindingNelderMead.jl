@@ -83,7 +83,7 @@ algorithm
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
 """
-function optimise(f::F, s::Simplex{T}; kwargs...) where {F, T<:Real}
+function optimise(f::F, s::Simplex{D,T}; kwargs...) where {F,D,T<:Real}
 
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 

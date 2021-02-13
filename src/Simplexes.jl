@@ -1,16 +1,16 @@
-struct Simplex{T<:Number,U<:Complex,V,D}
+struct Simplex{D,T<:Number,U<:Complex,V}
   vertices::Vector{Vertex{T,U,V}}
   permabs::Vector{Int}
   function Simplex(vertices::Vector{Vertex{T,U,V}}, permabs::Vector{Int}
       ) where {T,U<:Complex,V}
     D = length(vertices) - 1
-    output = new{T,U,V,D}(vertices, permabs)
+    output = new{D,T,U,V}(vertices, permabs)
     sort!(output)
     return output
   end
 end
 
-function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
+function Simplex(vertices::Vector)
   return Simplex(vertices, zeros(Int64, length(vertices)))
 end
 
@@ -36,14 +36,14 @@ end
 
 import Base: length, iterate, iterate, getindex
 import Base: eachindex, sort!, hash, extrema
-Base.length(s::Simplex{T,U,V,D}) where {T,U,V,D} = D + 1
+Base.length(s::Simplex{D}) where {D} = D + 1
 Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
 
 sortby(s::Simplex) = v->angle(value(v))
 
-function sortby(s::Simplex{T,U,V,2}) where {T,U,V}
+function sortby(s::Simplex{2})
   return function output(v)
     c = centre(s)
     pv = position(v)
@@ -63,7 +63,7 @@ function Base.extrema(s::Simplex)
   return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
 end
 
-dimensionality(s::Simplex{T,U,V,D}) where {T,U,V,D} = D
+dimensionality(s::Simplex{D}) where {D} = D
 
 selectabs(s, index) = s.vertices[s.permabs[index]]
 
@@ -95,7 +95,7 @@ swapworst!(s::Simplex, forthis::Vertex) = swap!(s, worstvertex(s), forthis)
 
 function closestomiddlevertex(s::Simplex)
   mid = mapreduce(position, +, s) ./ length(s)
-  _, index = findmin(map(v->sum(abs2, position(v) - mid), s))
+  _, index = findmin(map(v->sum(abs, position(v) - mid), s))
   return s[index]
 end
 

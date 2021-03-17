@@ -63,7 +63,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test returncode == :XTOL_REACHED
     end
 
-    @testset "Simplices in a simplex eps apart are converged" begin
+    @testset "Vertices in a simplex eps apart are converged" begin
       dim = 2
       T = Float64
       U = ComplexF64
@@ -76,7 +76,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test returncode == :XTOL_REACHED
     end
 
-    @testset "Simplices in a chain eps apart are converged" begin
+    @testset "Vertices in a chain eps apart are converged" begin
       dim = 2
       T = Float64
       U = ComplexF64
@@ -99,7 +99,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test returncode == :XTOL_REACHED
     end
 
-    @testset "Simplices vertices are in order" begin
+    @testset "Simplex vertices are in order" begin
       for _ ∈ 1:10
         dim = 2
         T = Float64
@@ -115,7 +115,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       end
     end
 
-    @testset "centres" begin
+    @testset "Simplex centres" begin
       v1 = Vertex([0.0, 0.0], one(ComplexF64))
       v2 = Vertex([1.0, 0.0], one(ComplexF64))
       v3 = Vertex([0.0, 1.0], one(ComplexF64))
@@ -123,14 +123,14 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test all(centre(s) .== [1/3, 1/3])
     end
 
-    @testset "extremas" begin
+    @testset "Simplex extremas" begin
       s = Simplex(x->im, [1.0, 3.0], 1.0)
       exs = WindingNelderMead.extrema(s)
       @test exs[1] == (1.0, 2.0)
       @test exs[2] == (3.0, 4.0)
     end
 
-    @testset "hypervolumes" begin
+    @testset "Simplex hypervolumes" begin
       x0 = rand(2)
       a, b = rand(2)
       v1 = Vertex(x0 .+ [0.0, 0.0], one(ComplexF64))

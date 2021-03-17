@@ -13,7 +13,7 @@ Find minimum of function, `f`, first creating a Simplex from vertices at
 """
 function optimise(f::T, initial_vertex_positions::U; kwargs...
    ) where {T, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
-  return optimise(f, Simplex(f, initial_vertex_positions); kwargs...)
+  return optimise!(Simplex(f, initial_vertex_positions), f; kwargs...)
 end
 
 """
@@ -59,7 +59,7 @@ function updatehistory!(history, newentry)
 end
 
 """
-    optimise(f, s; kwargs...)
+    optimise!(s, f; kwargs...)
 
 Find minimum of function, `f`, starting from Simplex, `s`, with options
 passed in via kwargs.
@@ -83,7 +83,7 @@ algorithm
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
 """
-function optimise(f::F, s::Simplex{D,T}; kwargs...) where {F,D,T<:Real}
+function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
 
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 
@@ -160,6 +160,6 @@ function optimise(f::F, s::Simplex{D,T}; kwargs...) where {F,D,T<:Real}
 
   iters == config[:maxiters] && (returncode = :MAXITERS_REACHED)
   return s, windingnumber(s), returncode, iters
-end # optimise
+end # optimise!
 
 end

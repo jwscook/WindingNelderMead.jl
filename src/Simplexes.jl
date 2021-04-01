@@ -1,22 +1,26 @@
-struct Simplex{D,T<:Number,U<:Complex,V}
-  vertices::Vector{Vertex{T,U,V}}
-  permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U,V}}, permabs::Vector{Int}
-      ) where {T,U<:Complex,V}
+using StaticArrays
+
+#permabsarray(x) = SizedVector((UInt32(0) for _ in eachindex(x))...)
+struct Simplex{D,T<:Number,U<:Complex,V,W<:AbstractVector{Vertex{T,U,V}},
+    X<:AbstractVector{<:Integer}}
+  vertices::W
+  permabs::X
+  function Simplex(vertices::W) where
+      {T,U<:Complex,V,W<:AbstractVector{Vertex{T,U,V}}}
     D = length(vertices) - 1
-    output = new{D,T,U,V}(vertices, permabs)
+#    permabs = permabsarray(vertices)
+    permabs = SizedVector((UInt32(0) for _ in eachindex(vertices))...)
+    X = typeof(permabs)
+    output = new{D,T,U,V,W,X}(vertices, permabs)
     sort!(output)
     return output
   end
 end
 
-function Simplex(vertices::Vector)
-  return Simplex(vertices, zeros(Int64, length(vertices)))
-end
-
-function Simplex(f::T, ic::U, initial_step::Number
-    ) where {T, U<:AbstractVector{<:Number}}
-  return Simplex(f, ic, initial_step .+ U(zeros(Bool, length(ic))))
+function Simplex(f::T, ic::AbstractVector{<:Number}, initial_step::Number
+    ) where {T}
+  initial_steps = [initial_step for i ∈ eachindex(ic)] # opportunity for SizedArray
+  return Simplex(f, ic, initial_steps)
 end
 
 function Simplex(f::T, ic::AbstractVector{U}, initial_steps::AbstractVector{V}
@@ -29,7 +33,7 @@ function Simplex(f::T, positions::U
     throw(ArgumentError("All entries in positions $positions must be the same
                         length"))
   end
-  vertices = [Vertex(p, f(p)) for p in positions]
+  vertices = SizedVector((Vertex(p, f(p)) for p in positions)...)
   return Simplex(vertices)
 end
 

@@ -47,7 +47,7 @@ function sortby(s::Simplex{2})
   return function output(v)
     c = centre(s)
     pv = position(v)
-    return atan(pv[2] - c[2], pv[1] - c[1])
+    return @inbounds atan(pv[2] - c[2], pv[1] - c[1])
   end
 end
 
@@ -65,7 +65,7 @@ end
 
 dimensionality(s::Simplex{D}) where {D} = D
 
-selectabs(s, index) = s.vertices[s.permabs[index]]
+selectabs(s, index) = @inbounds s.vertices[s.permabs[index]]
 
 bestvertex(s::Simplex) = selectabs(s, 1)
 worstvertex(s::Simplex) = selectabs(s, length(s))
@@ -107,11 +107,12 @@ function assessconvergence(simplex, config)
 
   toprocess = Set{Int}(1)
   processed = Set{Int}()
-  while !isempty(toprocess)
+  connectedto = Set{Int}()
+  @inbounds while !isempty(toprocess)
     vi = pop!(toprocess)
     v = simplex.vertices[vi]
     pv = position(v)
-    connectedto = Set{Int}()
+    empty!(connectedto)
     for (qi, q) ∈ enumerate(simplex)
       thisxtol = true
       pq = position(q)
@@ -129,7 +130,7 @@ function assessconvergence(simplex, config)
   allxtol && return :XTOL_REACHED
 
   allftol = true
-  for (vi, v) ∈ enumerate(simplex)
+  @inbounds for (vi, v) ∈ enumerate(simplex)
     for qi ∈ vi+1:length(simplex)
       q = simplex.vertices[qi]
       allftol &= all(isapprox(value(v), value(q),
@@ -148,9 +149,13 @@ function _πtoπ(ϕ::T) where {T}
   return ϕ
 end
 
-function windingangle(s::Simplex)
-  return sum(_πtoπ.(angle.(value.(circshift(s.vertices, -1))) .-
-                    angle.(value.(s.vertices))))
+function windingangle(s::Simplex{D,T,U}) where {D,T,U}
+  θ = zero(real(U))
+  @inbounds for i in 1:length(s)
+    θ += _πtoπ(angle(value(s.vertices[mod1(i+1, length(s))])) -
+               angle(value(s.vertices[i])))
+  end
+  return θ
 end
 
 function windingnumber(s::Simplex)

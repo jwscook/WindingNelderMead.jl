@@ -182,7 +182,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
         objective(x) = (x[1] + im * x[2]) - root
         ics = rand(2)
         sizes = rand(2)
-        solution = WindingNelderMead.optimise(x -> x[1] + im * x[2] - root,
+        solution = WindingNelderMead.optimise(objective,
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
         @test n == 1

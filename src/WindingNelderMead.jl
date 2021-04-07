@@ -53,7 +53,9 @@ end
 
 function updatehistory!(history, newentry)
   returncode = any(h->isequal(h, newentry), history) ? :ENDLESS_LOOP : :CONTINUE
-  history .= circshift(history, 1)
+  for i in length(history):-1:2 # history .= circshift(history, 1)
+    history[i] = history[i-1]
+  end
   history[1] = newentry
   return returncode
 end

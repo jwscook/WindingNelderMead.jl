@@ -6,11 +6,7 @@ Vertex(x::AbstractVector, f::F) where {F} = Vertex(x, f(x))
 
 value(v::Vertex) = v.value
 position(v::Vertex) = v.position
-Base.getindex(v::Vertex, i) = v.position[i]
-Base.eachindex(v::Vertex) = eachindex(v.position)
 newposition(a::Vertex{T,U,V}, ϵ, b) where {T,U,V} = V(a + ϵ .* (a - b))
-newposition(a::Vertex{T,U,V}, ϵ::Number, b) where {T,U,V} = V(a + ϵ * (a - b))
-
 
 function vertexpositions(ic::T, initial_steps::AbstractVector{V}
     ) where {U, T<:AbstractVector{U}, V<:Number}

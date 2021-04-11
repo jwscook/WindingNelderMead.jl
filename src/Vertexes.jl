@@ -20,7 +20,7 @@ function vertexpositions(ic::T, initial_steps::AbstractVector{V}
   end
   dim = length(ic)
   fx(i) = T([@inbounds ic[j] + (j == i) * initial_steps[j] for j ∈ 1:dim])
-  positions = map(i->fx(i), 1:dim+1)
+  positions = map(fx, 1:dim+1)
   return positions
 end
 

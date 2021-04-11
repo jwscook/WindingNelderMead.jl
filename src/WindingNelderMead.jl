@@ -38,17 +38,21 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   stopval = get(kwargs, :stopval, eps(real(T)))
   maxiters = get(kwargs, :maxiters, 1000)
 
-  α = get(kwargs, :α, 1.0) .* ones(Bool, dim)
-  β = get(kwargs, :β, 0.5) .* ones(Bool, dim)
-  γ = get(kwargs, :γ, 2.0) .* ones(Bool, dim)
-  δ = get(kwargs, :δ, 0.5) .* ones(Bool, dim)
+  α = get(kwargs, :α, 1.0)
+  β = get(kwargs, :β, 0.5)
+  γ = get(kwargs, :γ, 2.0)
+  δ = get(kwargs, :δ, 0.5)
   all(x->x >= 0, α) || error(ArgumentError("$α >= 0"))
   all(x->0 <= x < 1, β) || error(ArgumentError("0 <= $β < 1"))
   all(x->x > 1, γ) || error(ArgumentError("$γ > 1"))
   all(xy->xy[1] > xy[2], zip(γ, β)) || error(ArgumentError("$γ > $α"))
+  α = length(α) == 1 ? Tuple(α for _ ∈ 1:dim) : α
+  β̄ = length(β) == 1 ? Tuple(-β for _ ∈ 1:dim) : -β # minus sign
+  γ̄ = length(γ) == 1 ? Tuple(-γ for _ ∈ 1:dim) : -γ # minus sign
+  δ = length(δ) == 1 ? Tuple(δ for _ ∈ 1:dim) : δ
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
+          maxiters=maxiters, α=α, β̄=β̄, γ̄=γ̄, δ=δ)
 end
 
 function updatehistory!(history, newentry)
@@ -69,9 +73,9 @@ passed in via kwargs.
 # Keyword Arguments
 -  stopval (default sqrt(eps())): stopping criterion when function evaluates
 equal to or less than stopval
--  xtol_abs (default zeros(T)) .* ones(Bool, dimensionality(s)): stop if
+-  xtol_abs (default zero(T) scalar or with length dimensionality(s)): stop if
 the vertices of simplex get within this absolute tolerance
--  xtol_rel (default eps(T)) .* ones(Bool, dimensionality(s)): stop if
+-  xtol_rel (default eps(T) scalar or with length dimensionality(s)): stop if
 the vertices of simplex get within this relative tolerance
 -  ftol_abs (default zero(real(U))): stop if function evaluations at the
 vertices are close to one another by this absolute tolerance
@@ -90,8 +94,8 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 
   reflect(this, other) = Vertex(newposition(this, config[:α], other), f)
-  expand(this, other) = Vertex(newposition(this, -config[:γ], other), f)
-  contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
+  expand(this, other) = Vertex(newposition(this, config[:γ̄], other), f)
+  contract(this, other) = Vertex(newposition(this, config[:β̄], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
 
   function shrink!(s::Simplex)

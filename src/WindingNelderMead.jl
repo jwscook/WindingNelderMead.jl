@@ -31,8 +31,8 @@ end
 function convergenceconfig(dim::Int, T::Type; kwargs...)
   kwargs = Dict(kwargs)
   timelimit = get(kwargs, :timelimit, Inf)
-  xtol_abs = get(kwargs, :xtol_abs, zeros(real(T))) .* ones(Bool, dim)
-  xtol_rel = get(kwargs, :xtol_rel, eps(real(T))) .* ones(Bool, dim)
+  xtol_abs = get(kwargs, :xtol_abs, zero(real(T)))
+  xtol_rel = get(kwargs, :xtol_rel, eps(real(T)))
   ftol_abs = get(kwargs, :ftol_abs, zero(real(T)))
   ftol_rel = get(kwargs, :ftol_rel, eps(real(T)))
   stopval = get(kwargs, :stopval, eps(real(T)))
@@ -42,17 +42,19 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   β = get(kwargs, :β, 0.5)
   γ = get(kwargs, :γ, 2.0)
   δ = get(kwargs, :δ, 0.5)
-  all(x->x >= 0, α) || error(ArgumentError("$α >= 0"))
-  all(x->0 <= x < 1, β) || error(ArgumentError("0 <= $β < 1"))
-  all(x->x > 1, γ) || error(ArgumentError("$γ > 1"))
-  all(xy->xy[1] > xy[2], zip(γ, β)) || error(ArgumentError("$γ > $α"))
-  α = length(α) == 1 ? Tuple(α for _ ∈ 1:dim) : α
-  β̄ = length(β) == 1 ? Tuple(-β for _ ∈ 1:dim) : -β # minus sign
-  γ̄ = length(γ) == 1 ? Tuple(-γ for _ ∈ 1:dim) : -γ # minus sign
-  δ = length(δ) == 1 ? Tuple(δ for _ ∈ 1:dim) : δ
+
+  (α >= 0) || error(ArgumentError("$α >= 0"))
+  (0 <= β < 1) || error(ArgumentError("0 <= $β < 1"))
+  (γ > 1) || error(ArgumentError("$γ > 1"))
+  (γ > β) || error(ArgumentError("$γ > $α"))
+
+  vectoriser(x) = length(x) == 1 ? [x for _ ∈ 1:dim] : Vector(x)
+  xtol_abs = vectoriser(xtol_abs)
+  xtol_rel = vectoriser(xtol_rel)
+
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          maxiters=maxiters, α=α, β̄=β̄, γ̄=γ̄, δ=δ)
+          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
 end
 
 function updatehistory!(history, newentry)
@@ -94,8 +96,8 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 
   reflect(this, other) = Vertex(newposition(this, config[:α], other), f)
-  expand(this, other) = Vertex(newposition(this, config[:γ̄], other), f)
-  contract(this, other) = Vertex(newposition(this, config[:β̄], other), f)
+  expand(this, other) = Vertex(newposition(this, -config[:γ], other), f)
+  contract(this, other) = Vertex(newposition(this, -config[:β], other), f)
   shrink(this, other) = Vertex(newposition(this, config[:δ], other), f)
 
   function shrink!(s::Simplex)

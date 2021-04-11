@@ -105,9 +105,9 @@ function assessconvergence(simplex, config)
     return :STOPVAL_REACHED
   end
 
-  toprocess = Set{Int}(1)
-  processed = Set{Int}()
-  connectedto = Set{Int}()
+  toprocess = BitSet(1)
+  processed = BitSet()
+  connectedto = BitSet()
   @inbounds while !isempty(toprocess)
     vi = pop!(toprocess)
     v = simplex.vertices[vi]

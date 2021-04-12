@@ -102,11 +102,9 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
 
   function shrink!(s::Simplex)
     ignore = bestvertex(s)
-    lengthbefore = length(s)
     for v ∈ s
       isequal(v, ignore) || swap!(s, v, shrink(ignore, v))
     end
-    sort!(s)
     return nothing
   end
 

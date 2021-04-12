@@ -1,7 +1,8 @@
 struct Simplex{D,T<:Number,U<:Complex,V}
   vertices::Vector{Vertex{T,U,V}}
   permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U,V}}, permabs::Vector{Int}
+  function Simplex(vertices::Vector{Vertex{T,U,V}},
+      permabs::Vector{Int}=zeros(Int64, length(vertices))
       ) where {T,U<:Complex,V}
     D = length(vertices) - 1
     output = new{D,T,U,V}(vertices, permabs)
@@ -10,13 +11,9 @@ struct Simplex{D,T<:Number,U<:Complex,V}
   end
 end
 
-function Simplex(vertices::Vector)
-  return Simplex(vertices, zeros(Int64, length(vertices)))
-end
-
 function Simplex(f::T, ic::U, initial_step::Number
     ) where {T, U<:AbstractVector{<:Number}}
-  return Simplex(f, ic, initial_step .+ U(zeros(Bool, length(ic))))
+  return Simplex(f, ic, fill!(similar(ic), initial_step))
 end
 
 function Simplex(f::T, ic::AbstractVector{U}, initial_steps::AbstractVector{V}

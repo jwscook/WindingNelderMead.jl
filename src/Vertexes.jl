@@ -38,6 +38,7 @@ function Base.isequal(a::Vertex, b::Vertex)
   positions_equal = position(a) == position(b)
   return values_equal && positions_equal
 end
+Base.hash(v::Vertex) = hash(hash(v.value), hash(v.position))
 
 Base.isnan(a::Vertex) = isnan(value(a))
 

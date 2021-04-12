@@ -12,6 +12,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
     v2 = Vertex([0.0, 1.0], 2.0 - 3.0im)
     @test !(v1 == v2)
     @test isequal(v1, v2)
+    @test hash(v1) == hash(v2)
   end
 
   @testset "Simplex tests" begin

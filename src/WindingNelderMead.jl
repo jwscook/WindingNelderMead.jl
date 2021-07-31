@@ -109,7 +109,8 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
   end
 
   iters, totaltime = 0, 0.0
-  returncode = assessconvergence(s, config)
+  asg = AssessConvergenceGraph()
+  returncode = assessconvergence(s, config, asg)
   history = deepcopy(s.vertices)
 
   windings = windingnumber(s)
@@ -160,7 +161,7 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
 
         windings = rootlostandsimplexunchanged ? 0 : windingnumber(s)
       end
-      returncode = assessconvergence(s, config)
+      returncode = assessconvergence(s, config, asg)
     end
   end
 

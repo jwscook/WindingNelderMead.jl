@@ -49,8 +49,8 @@ function sortby(s::Simplex{2})
 end
 
 function Base.sort!(s::Simplex)
-  sort!(s.vertices, by=sortby(s))
-  sortperm!(s.permabs, s.vertices, by=x->abs(value(x)))
+  sort!(s.vertices, by=sortby(s), alg=InsertionSort)
+  sortperm!(s.permabs, s.vertices, by=x->abs(value(x)), alg=InsertionSort)
   return nothing
 end
 
@@ -96,15 +96,23 @@ function closestomiddlevertex(s::Simplex)
   return s[index]
 end
 
-function assessconvergence(simplex, config)
+struct AssessConvergenceGraph
+  toprocess::BitSet
+  processed::BitSet
+  connectedto::BitSet
+end
+AssessConvergenceGraph() = AssessConvergenceGraph(BitSet(), BitSet(), BitSet())
+
+function assessconvergence(simplex, config, asg=AssessConvergenceGraph())
 
   if abs(value(bestvertex(simplex))) <= config[:stopval]
     return :STOPVAL_REACHED
   end
 
-  toprocess = BitSet(1)
-  processed = BitSet()
-  connectedto = BitSet()
+  toprocess = asg.toprocess # toprocess is empty to exit the while loop
+  processed = empty!(asg.processed)
+  connectedto = asg.connectedto # connectedto is emptied at top of while loop
+  push!(toprocess, 1) # now only contains 1
   @inbounds while !isempty(toprocess)
     vi = pop!(toprocess)
     v = simplex.vertices[vi]

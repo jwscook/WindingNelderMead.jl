@@ -6,7 +6,7 @@ Vertex(x::AbstractVector, f::F) where {F} = Vertex(x, f(x))
 
 value(v::Vertex) = v.value
 position(v::Vertex) = v.position
-newposition(a::Vertex{T,U,V}, ϵ, b) where {T,U,V} = V(a + ϵ .* (a - b))
+newposition(a, ϵ, b) = a + ϵ .* (a - b)
 
 function vertexpositions(ic::T, initial_steps::AbstractVector{V}
     ) where {U, T<:AbstractVector{U}, V<:Number}
@@ -32,6 +32,7 @@ Base.isless(a::Vertex, b::Vertex) = abs(value(a)) < abs(value(b))
 Base.:<=(a::Vertex, b::Vertex) = abs(value(a)) <= abs(value(b))
 Base.:>=(a::Vertex, b::Vertex) = abs(value(a)) >= abs(value(b))
 Base.:-(a::Vertex, b::Vertex) = position(a) - position(b)
+Base.:-(a::AbstractVector, b::Vertex) = a - position(b)
 Base.:+(a::Vertex, b::AbstractVector) = position(a) + b
 function Base.isequal(a::Vertex, b::Vertex)
   values_equal = value(a) == value(b) || (isnan(a) && isnan(b))

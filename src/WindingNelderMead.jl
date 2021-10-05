@@ -123,24 +123,26 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
         best = bestvertex(s)
         worst = worstvertex(s)
         secondworst = secondworstvertex(s)
-        centroid = Vertex(centroidposition(s), f)
-        reflected = reflect(centroid, worst)
+        reflected = reflect(centroidposition(s), worst)
 
         returncode = updatehistory!(history, reflected)
         returncode == :ENDLESS_LOOP && break
 
         if best <= reflected < secondworst
           swapworst!(s, reflected)
-        elseif reflected < best
-          expanded = expand(centroid, reflected)
-          expanded < reflected && swapworst!(s, expanded)
-          expanded >= reflected && swapworst!(s, reflected)
-        elseif secondworst <= reflected < worst
-          contracted = contract(centroid, reflected)
-          contracted <= reflected ? swapworst!(s, contracted) : shrink!(s)
-        elseif reflected >= worst
-          contracted = contract(centroid, worst)
-          contracted < worst ? swapworst!(s, contracted) : shrink!(s)
+        else
+          centroid = Vertex(centroidposition(s), f)
+          if reflected < best
+            expanded = expand(centroid, reflected)
+            expanded < reflected && swapworst!(s, expanded)
+            expanded >= reflected && swapworst!(s, reflected)
+          elseif secondworst <= reflected < worst
+            contracted = contract(centroid, reflected)
+            contracted <= reflected ? swapworst!(s, contracted) : shrink!(s)
+          elseif reflected >= worst
+            contracted = contract(centroid, worst)
+            contracted < worst ? swapworst!(s, contracted) : shrink!(s)
+          end
         end
 
         windings = windingnumber(s)
@@ -159,13 +161,19 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
         returncode = updatehistory!(history, centroid)
         returncode == :ENDLESS_LOOP && break
 
-        windings = rootlostandsimplexunchanged ? 0 : windingnumber(s)
+        windings = if rootlostandsimplexunchanged
+          centroid < worstvertex(s) && swapworst!(s, centroid)
+          0
+        else
+          windingnumber(s)
+        end
       end
       returncode = assessconvergence(s, config, asg)
     end
   end
 
   iters == config[:maxiters] && (returncode = :MAXITERS_REACHED)
+
   return s, windingnumber(s), returncode, iters
 end # optimise!
 

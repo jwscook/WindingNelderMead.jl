@@ -148,8 +148,9 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
         windings = windingnumber(s)
       else
         keeper = closestomiddlevertex(s)
-        centroid = Vertex(centroidposition(s, keeper), f)
-        any(isequal(centroid, v) for v in s) && continue
+        newnodeposition = centroidposition(s, keeper)
+        any(isequal(newnodeposition, position(v)) for v in s) && continue
+        centroid = Vertex(newnodeposition, f)
         rootlostandsimplexunchanged = true
         for vertex ∈ s
           isequal(vertex, keeper) && continue

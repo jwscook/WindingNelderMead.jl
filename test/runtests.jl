@@ -109,9 +109,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
         v2 = Vertex(rand(dim), rand(U))
         v3 = Vertex(rand(dim), rand(U))
         s = Simplex([v1, v2, v3])
-        p = s.permabs
-        @test abs(value(s[p[1]])) < abs(value(s[p[2]]))
-        @test abs(value(s[p[2]])) < abs(value(s[p[3]]))
+        sort!(s)
         @test issortedbyangle(s)
       end
     end
@@ -149,7 +147,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test hypervolume(s) ≈ (a * b * c) / 6
     end
 
-    @testset "atan gives same as angle for sortby" begin
+    @testset "atan gives same as angle for sortbyangle" begin
       v1 = Vertex([0.0, 0.0], rand(ComplexF64))
       v2 = Vertex([1.0, 0.0], rand(ComplexF64))
       v3 = Vertex([0.0, 1.0], rand(ComplexF64))
@@ -158,7 +156,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       for v in s
         pv = position(v)
         a = angle(Complex(pv[1] - c[1], pv[2] - c[2]))
-        @test a == WindingNelderMead.sortby(s)(v)
+        @test a == WindingNelderMead.sortbyangle(s)(v)
       end
     end
 
@@ -167,11 +165,22 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       ps = ([-1.0, -1.0], [1.0, -1.0], [0.0, 1.0])
       s = Simplex([Vertex(p, objective(p)) for p in ps])
       @test windingnumber(s) == 1
+      @test issortedbyangle(s)
       invobjective(x) = 1 / objective(x)
       s = Simplex([Vertex(p, invobjective(p)) for p in ps])
       @test windingnumber(s) == -1
+      @test issortedbyangle(s)
     end
 
+    @testset "selectmin and selectmax" begin
+      for _ in 0:9
+        N = rand(2:5)
+        x = randn(ComplexF64, N)
+        p = sortperm(abs.(x))
+        @test x[p[1]] == WindingNelderMead.selectmin(abs, x)
+        @test x[p[N]] == WindingNelderMead.selectmax(abs, x)
+      end
+    end
   end
 
   @testset "End-to-end tests roots" begin

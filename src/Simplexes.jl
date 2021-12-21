@@ -1,13 +1,8 @@
 struct Simplex{D,T<:Number,U<:Complex,V}
   vertices::Vector{Vertex{T,U,V}}
-  permabs::Vector{Int}
-  function Simplex(vertices::Vector{Vertex{T,U,V}},
-      permabs::Vector{Int}=zeros(Int64, length(vertices))
-      ) where {T,U<:Complex,V}
+  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
     D = length(vertices) - 1
-    output = new{D,T,U,V}(vertices, permabs)
-    sort!(output)
-    return output
+    return new{D,T,U,V}(vertices)
   end
 end
 
@@ -38,9 +33,9 @@ Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
 
-sortby(s::Simplex) = v->angle(value(v))
+sortbyangle(s::Simplex) = v->angle(value(v))
 
-function sortby(s::Simplex{2})
+function sortbyangle(s::Simplex{2})
   return function output(v)
     c = centre(s)
     pv = position(v)
@@ -49,12 +44,11 @@ function sortby(s::Simplex{2})
 end
 
 function Base.sort!(s::Simplex)
-  sort!(s.vertices, by=sortby(s), alg=InsertionSort)
-  sortperm!(s.permabs, s.vertices, by=x->abs(value(x)), alg=InsertionSort)
+  sort!(s.vertices, by=sortbyangle(s), alg=InsertionSort)
   return nothing
 end
 
-issortedbyangle(s::Simplex) = issorted(s, by=sortby(s))
+issortedbyangle(s::Simplex) = issorted(s, by=sortbyangle(s))
 
 function Base.extrema(s::Simplex)
   return [extrema(position(v)[i] for v in s) for i in 1:dimensionality(s)]
@@ -62,11 +56,24 @@ end
 
 dimensionality(s::Simplex{D}) where {D} = D
 
-selectabs(s, index) = @inbounds s.vertices[s.permabs[index]]
+@static if VERSION < v"1.7"
+  function selectmin(f::F, x) where {F}
+    reduce(x) do a, b
+      f(a) < f(b) ? a : b
+    end
+  end
+  selectmax(f::F, x) where {F} = selectmin(x->-f(x), x)
+else
+  selectmin(f, x) where {F} = argmin(f, x)
+  selectmax(f, x) where {F} = argmax(f, x)
+end
 
-bestvertex(s::Simplex) = selectabs(s, 1)
-worstvertex(s::Simplex) = selectabs(s, length(s))
-secondworstvertex(s::Simplex) = selectabs(s, length(s) - 1)
+bestvertex(s::Simplex) = selectmin(v->abs(value(v)), s.vertices)
+worstvertex(s::Simplex) = selectmax(v->abs(value(v)), s.vertices)
+function secondworstvertex(s::Simplex, worst::Vertex)
+  return selectmax(v->abs(value(v)) - Inf * isequal(worst, v), s.vertices)
+end
+secondworstvertex(s::Simplex) = secondworstvertex(s, worstvertex(s))
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   g(v) = isequal(v, ignoredvertex) ? zero(position(v)) : position(v)
@@ -84,11 +91,8 @@ end
 function swap!(s::Simplex, this::Vertex, forthat::Vertex)
   @assert this ∈ s.vertices
   s.vertices[findfirst(x -> isequal(x, this), s.vertices)] = forthat
-  sort!(s)
   return nothing
 end
-
-swapworst!(s::Simplex, forthis::Vertex) = swap!(s, worstvertex(s), forthis)
 
 function closestomiddlevertex(s::Simplex)
   mid = mapreduce(position, +, s) ./ length(s)
@@ -164,6 +168,7 @@ function windingangle(s::Simplex{D,T,U}) where {D,T,U}
 end
 
 function windingnumber(s::Simplex)
+  sort!(s)
   radians = windingangle(s)
   return isfinite(radians) ? Int64(round(radians / 2π)) : Int64(0)
 end

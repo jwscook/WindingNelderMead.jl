@@ -122,26 +122,26 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
       if windings == 0
         best = bestvertex(s)
         worst = worstvertex(s)
-        secondworst = secondworstvertex(s)
+        secondworst = secondworstvertex(s, worst)
         reflected = reflect(centroidposition(s), worst)
 
         returncode = updatehistory!(history, reflected)
         returncode == :ENDLESS_LOOP && break
 
         if best <= reflected < secondworst
-          swapworst!(s, reflected)
+          swap!(s, worst, reflected)
         else
           centroid = Vertex(centroidposition(s), f)
           if reflected < best
             expanded = expand(centroid, reflected)
-            expanded < reflected && swapworst!(s, expanded)
-            expanded >= reflected && swapworst!(s, reflected)
+            expanded < reflected && swap!(s, worst, expanded)
+            expanded >= reflected && swap!(s, worst, reflected)
           elseif secondworst <= reflected < worst
             contracted = contract(centroid, reflected)
-            contracted <= reflected ? swapworst!(s, contracted) : shrink!(s)
+            contracted <= reflected ? swap!(s, worst, contracted) : shrink!(s)
           elseif reflected >= worst
             contracted = contract(centroid, worst)
-            contracted < worst ? swapworst!(s, contracted) : shrink!(s)
+            contracted < worst ? swap!(s, worst, contracted) : shrink!(s)
           end
         end
 
@@ -163,7 +163,8 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
         returncode == :ENDLESS_LOOP && break
 
         windings = if rootlostandsimplexunchanged
-          centroid < worstvertex(s) && swapworst!(s, centroid)
+          worst = worstvertex(s)
+          centroid < worst && swap!(s, worst, centroid)
           0
         else
           windingnumber(s)

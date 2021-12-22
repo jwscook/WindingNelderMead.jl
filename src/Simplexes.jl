@@ -1,4 +1,4 @@
-struct Simplex{D,T<:Number,U<:Complex,V}
+struct Simplex{D,T<:Number,U,V}
   vertices::Vector{Vertex{T,U,V}}
   function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
     D = length(vertices) - 1
@@ -59,7 +59,13 @@ dimensionality(s::Simplex{D}) where {D} = D
 @static if VERSION < v"1.7"
   function selectmin(f::F, x) where {F}
     reduce(x) do a, b
-      f(a) < f(b) ? a : b
+      fa, fb = f(a), f(b)
+      fa < fb && return a
+      fa > fb && return b
+      fa == fb && return a
+      isnan(fb) || return a
+      isnan(fa) || return b
+      @error "Shouldn't be possible to get here: $fa, $fb."
     end
   end
   selectmax(f::F, x) where {F} = selectmin(x->-f(x), x)

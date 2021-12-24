@@ -17,7 +17,7 @@ function Simplex(f::T, ic::AbstractVector{U}, initial_steps::AbstractVector{V}
 end
 function Simplex(f::T, positions::U
     ) where {T, W<:Number, V<:AbstractVector{W}, U<:AbstractVector{V}}
-  if length(unique(length.(positions))) != 1
+  if length(unique(length, positions)) != 1
     throw(ArgumentError("All entries in positions $positions must be the same
                         length"))
   end
@@ -82,8 +82,8 @@ end
 secondworstvertex(s::Simplex) = secondworstvertex(s, worstvertex(s))
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
-  g(v) = isequal(v, ignoredvertex) ? zero(position(v)) : position(v)
-  return mapreduce(g, +, s) / (length(s) - 1)
+  verticesexceptignored = Iterators.filter(v->!isequal(v, ignoredvertex), s)
+  return mapreduce(position, +, verticesexceptignored) / (length(s) - 1)
 end
 
 centre(s::Simplex) = mapreduce(position, +, s) / length(s)

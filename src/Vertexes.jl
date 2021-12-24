@@ -19,8 +19,10 @@ function vertexpositions(ic::T, initial_steps::AbstractVector{V}
                         $initial_steps"))
   end
   dim = length(ic)
-  fx(i) = T([@inbounds ic[j] + (j == i) * initial_steps[j] for j ∈ 1:dim])
-  positions = map(fx, 1:dim+1)
+  _fx(i, ::Type{<:T}) where {T} = T(_fx(i)) # for static arrays etc
+  _fx(i, ::Type{<:Vector}) = collect(_fx(i)) # standard vectors
+  _fx(i) = ((@inbounds ic[j] + (j == i) * initial_steps[j]) for j ∈ 1:dim)
+  positions = map(i->_fx(i, T), 1:dim+1)
   return positions
 end
 

@@ -63,9 +63,9 @@ dimensionality(s::Simplex{D}) where {D} = D
       fa < fb && return a
       fa > fb && return b
       fa == fb && return a
-      isnan(fb) || return a
-      isnan(fa) || return b
-      @error "Shouldn't be possible to get here: $fa, $fb."
+      isnan(fb) && return a
+      isnan(fa) && return b
+      @error "Shouldn't be possible to get here: $fa, $fb. $x"
     end
   end
   selectmax(f::F, x) where {F} = selectmin(x->-f(x), x)

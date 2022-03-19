@@ -175,6 +175,7 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
   end
 
   iters == config[:maxiters] && (returncode = :MAXITERS_REACHED)
+  totaltime >= config[:timelimit] && (returncode = :TIMELIMIT_REACHED)
 
   return s, windingnumber(s), returncode, iters
 end # optimise!

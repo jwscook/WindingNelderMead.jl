@@ -167,8 +167,7 @@ end
 function windingangle(s::Simplex{D,T,U}) where {D,T,U}
   θ = zero(real(U))
   @inbounds for i in 1:length(s)
-    θ += _πtoπ(angle(value(s.vertices[mod1(i+1, length(s))])) -
-               angle(value(s.vertices[i])))
+    θ += _πtoπ(angle(value(s[mod1(i+1, length(s))])) - angle(value(s[i])))
   end
   return θ
 end

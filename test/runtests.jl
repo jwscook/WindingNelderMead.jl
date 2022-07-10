@@ -147,6 +147,14 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test hypervolume(s) ≈ (a * b * c) / 6
     end
 
+    @testset "Simplex in 1D" begin
+      v1 = Vertex(irrelevant, 1.0 + im)
+      v2 = Vertex(irrelevant, -1.0 - im)
+      encloseszero = Simplex([v1, v2])
+      @test isapprox(1, abs(windingangle(encloseszero)) / (2π))
+      @test windingnumber(encloseszero) == -1
+    end
+
     @testset "atan gives same as angle for sortbyangle" begin
       v1 = Vertex([0.0, 0.0], rand(ComplexF64))
       v2 = Vertex([1.0, 0.0], rand(ComplexF64))

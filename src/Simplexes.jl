@@ -159,8 +159,8 @@ function assessconvergence(simplex, config, asg=AssessConvergenceGraph())
 end
 
 function _πtoπ(ϕ::T) where {T}
-  ϕ < -T(π) && return _πtoπ(ϕ + 2π)
-  ϕ >= T(π) && return _πtoπ(ϕ - 2π)
+  ϕ <= -T(π) && return _πtoπ(ϕ + 2π)
+  ϕ > T(π) && return _πtoπ(ϕ - 2π)
   return ϕ
 end
 

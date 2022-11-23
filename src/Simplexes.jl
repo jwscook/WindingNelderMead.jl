@@ -70,8 +70,8 @@ dimensionality(s::Simplex{D}) where {D} = D
   end
   selectmax(f::F, x) where {F} = selectmin(x->-f(x), x)
 else
-  selectmin(f, x) where {F} = argmin(f, x)
-  selectmax(f, x) where {F} = argmax(f, x)
+  selectmin(f::F, x) where {F} = argmin(f, x)
+  selectmax(f::F, x) where {F} = argmax(f, x)
 end
 
 bestvertex(s::Simplex) = selectmin(v->abs(value(v)), s.vertices)

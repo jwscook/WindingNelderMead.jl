@@ -24,7 +24,7 @@ vertex position, `initial_position`, and other vertices `initial_step` away from
 that point in all directions, and options passed in via kwargs.
 """
 function optimise(f::T, initial_position::AbstractVector{U}, initial_step;
-                  kwargs...) where {T, U<:Number, V<:Number}
+                  kwargs...) where {T, U<:Number}
   return optimise(f, vertexpositions(initial_position, initial_step); kwargs...)
 end
 

@@ -1,6 +1,6 @@
-struct Simplex{D,T<:Number,U,V}
+struct Simplex{D,T<:Number,U<:Number,V}
   vertices::Vector{Vertex{T,U,V}}
-  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
+  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U,V}
     D = length(vertices) - 1
     return new{D,T,U,V}(vertices)
   end

@@ -1,6 +1,6 @@
-struct Simplex{D,T<:Number,U,V}
+struct Simplex{D,T<:Number,U<:Number,V}
   vertices::Vector{Vertex{T,U,V}}
-  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U<:Complex,V}
+  function Simplex(vertices::Vector{Vertex{T,U,V}}) where {T,U,V}
     D = length(vertices) - 1
     return new{D,T,U,V}(vertices)
   end
@@ -70,8 +70,8 @@ dimensionality(s::Simplex{D}) where {D} = D
   end
   selectmax(f::F, x) where {F} = selectmin(x->-f(x), x)
 else
-  selectmin(f, x) where {F} = argmin(f, x)
-  selectmax(f, x) where {F} = argmax(f, x)
+  selectmin(f::F, x) where {F} = argmin(f, x)
+  selectmax(f::F, x) where {F} = argmax(f, x)
 end
 
 bestvertex(s::Simplex) = selectmin(v->abs(value(v)), s.vertices)

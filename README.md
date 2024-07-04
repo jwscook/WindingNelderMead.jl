@@ -5,7 +5,7 @@
 
 # WindingNelderMead.jl
 
-Find the roots of a function <img src="https://render.githubusercontent.com/render/math?math=\mathbb{R}^n \rightarrow \mathbb{C}">.
+Find the roots of a complex function, or even a function that returns two numbers converted into one that returns a complex number.
 
 The following code
 

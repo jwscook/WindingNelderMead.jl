@@ -33,7 +33,13 @@ Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
 
-sortbyangle(s::Simplex) = v->angle(value(v))
+function sortbyangle(s::Simplex{1})
+  return function output(v)
+    c = centre(s)
+    pv = position(v)
+    return @inbounds atan(pv[1] - c[1])
+  end
+end
 
 function sortbyangle(s::Simplex{2})
   return function output(v)
@@ -172,10 +178,31 @@ function windingangle(s::Simplex{D,T,U}) where {D,T,U}
   return θ
 end
 
-function windingnumber(s::Simplex)
+function _windingnumber(s::Simplex)
   sort!(s)
   radians = windingangle(s)
   return isfinite(radians) ? Int64(round(radians / 2π)) : Int64(0)
 end
+
+"""
+windingnumber(s::Simplex{1})
+
+A 1D simplex cant give you a signed winding number
+Arguments:
+s (Simplex{1}) the 1D simplex, i.e. two points
+
+Returns:
+windingnumber (UInt)
+"""
+windingnumber(s::Simplex{1}) = UInt(_windingnumber(s))
+"""
+windingnumber(s::Simplex{2})
+Arguments:
+s (Simplex{2}) the 2D simplex, i.e. three points forming a triangle
+
+Returns:
+windingnumber (Int64)
+"""
+windingnumber(s::Simplex{2}) = _windingnumber(s)
 
 

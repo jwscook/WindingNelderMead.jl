@@ -182,6 +182,17 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       @test issortedbyangle(s)
     end
 
+    @testset "poles have winding number of -1" begin
+      for _ in 1:10
+        pole = rand(2)
+        objective(x) = 1 / (x[1] + im * x[2] .- (pole[1] + im * pole[2]))
+        ps = ([-1.0, -1.0] .+ pole, [1.0, -1.0] .+ pole, [0.0, 1.0] .+ pole)
+        s = Simplex([Vertex(p, objective(p)) for p in ps])
+        @test windingnumber(s) == -1
+        @test issortedbyangle(s)
+      end
+    end
+
     @testset "selectmin and selectmax" begin
       for _ in 0:9
         N = rand(2:5)

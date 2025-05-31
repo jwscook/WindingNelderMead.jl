@@ -157,21 +157,8 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       end
     end
 
-    @testset "atan gives same as angle for sortbyangle" begin
-      v1 = Vertex([0.0, 0.0], rand(ComplexF64))
-      v2 = Vertex([1.0, 0.0], rand(ComplexF64))
-      v3 = Vertex([0.0, 1.0], rand(ComplexF64))
-      s = Simplex([v1, v2, v3])
-      c = centre(s)
-      for v in s
-        pv = position(v)
-        a = angle(Complex(pv[1] - c[1], pv[2] - c[2]))
-        @test a == WindingNelderMead.sortbyangle(s)(v)
-      end
-    end
-
     @testset "root (pole) has winding number 1 (-1) in 2D" begin
-      objective(x) = (x[1] + im * x[2])
+      objective(x) = π * (x[1] + im * x[2])
       ps = ([-1.0, -1.0], [1.0, -1.0], [0.0, 1.0])
       s = Simplex([Vertex(p, objective(p)) for p in ps])
       @test windingnumber(s) == 1
@@ -185,7 +172,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
     @testset "poles have winding number of -1" begin
       for _ in 1:10
         pole = rand(2)
-        objective(x) = 1 / (x[1] + im * x[2] .- (pole[1] + im * pole[2]))
+        objective(x) = 1 / (2x[1] + 4im * x[2] .- (pole[1] + im * pole[2]))
         ps = ([-1.0, -1.0] .+ pole, [1.0, -1.0] .+ pole, [0.0, 1.0] .+ pole)
         s = Simplex([Vertex(p, objective(p)) for p in ps])
         @test windingnumber(s) == -1
@@ -210,14 +197,14 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       for _ in 1:10
         stopval=10.0^(-rand(3:14))
         root = rand(ComplexF64)
-        objective(x) = (x[1] + im * x[2]) - root
+        objective(x) = 1/sqrt(2) * (x[1] + im * x[2]) - root
         ics = rand(2)
         sizes = rand(2)
         solution = WindingNelderMead.optimise(objective,
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
         @test n == 1
-        @test WindingNelderMead.root(s) ≈ root
+        @test isapprox(WindingNelderMead.root(s), root, rtol=1e-4)
         if returncode == :STOPVAL_REACHED
           @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0

@@ -50,7 +50,7 @@ xlabel!(h[2], "Real v")
 ylabel!(h[2], "Imag v")
 xlabel!(h[3], "Iteration")
 ylabel!(h[3], "Log10 |v|")
-anim = @animate for (i, w) in enumerate(windingnumbers) 
+anim = @animate for (i, w) in enumerate(windingnumbers)
   x, y = positions[i]
   rv, iv = values[i]
   c = iszero(w) ? :blue : :red

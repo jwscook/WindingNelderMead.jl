@@ -85,7 +85,6 @@ worstvertex(s::Simplex) = selectmax(v->abs(value(v)), s.vertices)
 function secondworstvertex(s::Simplex, worst::Vertex)
   return selectmax(v->abs(value(v)) - Inf * isequal(worst, v), s.vertices)
 end
-secondworstvertex(s::Simplex) = secondworstvertex(s, worstvertex(s))
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   verticesexceptignored = Iterators.filter(v->!isequal(v, ignoredvertex), s)
@@ -205,4 +204,35 @@ windingnumber (Int64)
 """
 windingnumber(s::Simplex{2}) = _windingnumber(s)
 
+"""
+root(s::Simplex{2})
+
+Return the complex root for a simplex that must have a winding number 1.
+
+Arguments:
+s (Simplex{2}) the 2D simplex, i.e. three points
+"""
+function root(s::Simplex{2, T, U, V}) where {T, U, V}
+  @assert windingnumber(s) == 1
+  A3 = ones(real(U), 3, 3) # TODO: consider storing this on the simplex
+  b3 = zeros(U, 3) # TODO: consider storing this on the simplex
+  for (i, vertex) in enumerate(s)
+    p = position(vertex)
+    v = value(vertex)
+    A3[i, 2] = real(v)
+    A3[i, 3] = imag(v)
+    b3[i] = p[1] + im * p[2]
+  end
+  coeffs = A3 \ b3 # TODO: consider storing this on the simplex
+  return real(coeffs[1]) / real(coeffs[2]) + im * imag(coeffs[1]) / imag(coeffs[3])
+#  # Alternative less accurate method
+#  A2 = zeros(real(U), 2, 2) # TODO: consider storing this on the simplex
+#  A2[1, 1] = real(coeffs[2])
+#  A2[2, 1] = imag(coeffs[2])
+#  A2[1, 2] = real(coeffs[3])
+#  A2[2, 2] = imag(coeffs[3])
+#  b2 = [real(coeffs[1]), imag(coeffs[1])] # TODO: consider storing this on the simplex
+#  x2 = A2 \ b2 # TODO: consider storing this on the simplex
+#  return complex(x2[1], x2[2])
+end
 

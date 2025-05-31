@@ -1,7 +1,7 @@
 name = "WindingNelderMead"
 uuid = "90331ebb-4c50-4cb3-baac-4577cf398cd8"
 authors = ["James Cook <cookjws@gmail.com>"]
-version = "0.1.3"
+version = "0.1.4"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

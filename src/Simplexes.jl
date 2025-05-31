@@ -85,7 +85,6 @@ worstvertex(s::Simplex) = selectmax(v->abs(value(v)), s.vertices)
 function secondworstvertex(s::Simplex, worst::Vertex)
   return selectmax(v->abs(value(v)) - Inf * isequal(worst, v), s.vertices)
 end
-secondworstvertex(s::Simplex) = secondworstvertex(s, worstvertex(s))
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   verticesexceptignored = Iterators.filter(v->!isequal(v, ignoredvertex), s)

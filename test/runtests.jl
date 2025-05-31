@@ -217,6 +217,7 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
         @test n == 1
+        @test WindingNelderMead.root(s) ≈ root
         if returncode == :STOPVAL_REACHED
           @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0

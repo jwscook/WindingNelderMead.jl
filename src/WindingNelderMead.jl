@@ -42,11 +42,13 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   β = get(kwargs, :β, 0.5)
   γ = get(kwargs, :γ, 2.0)
   δ = get(kwargs, :δ, 0.5)
+  ρ = get(kwargs, :ρ, 2.0)
 
   (α >= 0) || throw(ArgumentError("$α >= 0"))
   (0 <= β < 1) || throw(ArgumentError("0 <= $β < 1"))
   (γ > 1) || throw(ArgumentError("$γ > 1"))
   (γ > β) || throw(ArgumentError("$γ > $α"))
+  (ρ >= 0) || throw(ArgumentError("$ρ >= 0"))
 
   vectoriser(x) = length(x) == 1 ? [x for _ ∈ 1:dim] : Vector(x)
   xtol_abs = vectoriser(xtol_abs)
@@ -54,7 +56,7 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
 
   return (timelimit=timelimit, xtol_abs=xtol_abs, xtol_rel=xtol_rel,
           ftol_abs=ftol_abs, ftol_rel=ftol_rel, stopval=stopval,
-          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ)
+          maxiters=maxiters, α=α, β=β, γ=γ, δ=δ, ρ=ρ)
 end
 
 function updatehistory!(history, newentry)
@@ -67,12 +69,84 @@ function updatehistory!(history, newentry)
 end
 
 """
+    bifurcate!(s, history, f; istargetwindingnumber=(!iszero))
+
+Bifurcate the simplex to find the location of the minimum.
+Note that using the linear approximation of the root is not better than this.
+"""
+function bifurcate!(s, history, f::F, istargetwindingnumber::G) where {F,G}
+   keeper = closestomiddlevertex(s)
+   newnodeposition = centroidposition(s, keeper)
+   any(isequal(newnodeposition, position(v)) for v in s) && return windingnumber(s)
+   centroid = Vertex(newnodeposition, f)
+   rootlostandsimplexunchanged = true
+   for vertex ∈ s
+     isequal(vertex, keeper) && continue
+     swap!(s, vertex, centroid)
+     istargetwindingnumber(windingnumber(s)) || (rootlostandsimplexunchanged = false; break)
+     swap!(s, centroid, vertex)
+   end
+
+   returncode = updatehistory!(history, centroid)
+
+   if rootlostandsimplexunchanged
+     worst = worstvertex(s)
+     centroid < worst && swap!(s, worst, centroid)
+   end
+   return windingnumber(s), returncode
+end
+
+function neldermeadstep!(s::Simplex, history, f::F, config,
+    reflect::R, expand::E, contract::C, shrink::S, shrink!::S!) where {F,R,E,C,S,S!}
+  best = bestvertex(s)
+  worst = worstvertex(s)
+
+  returncode = :CONTINUE
+
+  ρ = config[:ρ]
+
+  rootposition = trustregion(root(s), s, ρ)
+
+  linear = iszero(ρ) ? reflect(centroidposition(s), worst) : Vertex(rootposition, f)
+  if linear < best && !iszero(ρ)
+    swap!(s, worst, linear)
+  else
+    reflected = iszero(ρ) ? linear : reflect(centroidposition(s), worst)
+    candidatevertex = min(reflected, linear)
+    returncode = updatehistory!(history, candidatevertex)
+    returncode == :ENDLESS_LOOP && return windingnumber(s), returncode
+    secondworst = secondworstvertex(s, worst)
+    if best <= candidatevertex < secondworst
+      swap!(s, worst, candidatevertex)
+    else
+      centroid = Vertex(centroidposition(s), f)
+      if candidatevertex < best
+        expanded = expand(centroid, candidatevertex)
+        expanded < candidatevertex && swap!(s, worst, expanded)
+        expanded >= candidatevertex && swap!(s, worst, candidatevertex)
+      elseif secondworst <= candidatevertex < worst
+        contracted = contract(centroid, candidatevertex)
+        contracted <= candidatevertex ? swap!(s, worst, contracted) : shrink!(s)
+      elseif candidatevertex >= worst
+        contracted = contract(centroid, worst)
+        contracted < worst ? swap!(s, worst, contracted) : shrink!(s)
+      end
+    end
+  end
+
+  return windingnumber(s), returncode
+end
+
+
+"""
     optimise!(s, f; kwargs...)
 
 Find minimum of function, `f`, starting from Simplex, `s`, with options
 passed in via kwargs.
 
 # Keyword Arguments
+-  istargetwindingnumber (default !iszero): a function that accepts the winding number
+and returns true if the user want to bifurcate the simplex to find the it's location.
 -  stopval (default sqrt(eps())): stopping criterion when function evaluates
 equal to or less than stopval
 -  xtol_abs (default zero(T) scalar or with length dimensionality(s)): stop if
@@ -90,8 +164,10 @@ algorithm
 -  β (default 0.5): Contraction factor
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
+-  ρ (default 2.0): Trust region factor - search first based on linear fit
+up to ρ times the size of the simplex
 """
-function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
+function optimise!(s::Simplex{D,T}, f::F; istargetwindingnumber::G=!iszero, kwargs...) where {D,T<:Real,F,G}
 
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 
@@ -119,57 +195,12 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
     totaltime += @elapsed begin
       (iters += 1) < config[:maxiters] || break
 
-      if windings == 0
-        best = bestvertex(s)
-        worst = worstvertex(s)
-        secondworst = secondworstvertex(s, worst)
-        reflected = reflect(centroidposition(s), worst)
-
-        returncode = updatehistory!(history, reflected)
-        returncode == :ENDLESS_LOOP && break
-
-        if best <= reflected < secondworst
-          swap!(s, worst, reflected)
-        else
-          centroid = Vertex(centroidposition(s), f)
-          if reflected < best
-            expanded = expand(centroid, reflected)
-            expanded < reflected && swap!(s, worst, expanded)
-            expanded >= reflected && swap!(s, worst, reflected)
-          elseif secondworst <= reflected < worst
-            contracted = contract(centroid, reflected)
-            contracted <= reflected ? swap!(s, worst, contracted) : shrink!(s)
-          elseif reflected >= worst
-            contracted = contract(centroid, worst)
-            contracted < worst ? swap!(s, worst, contracted) : shrink!(s)
-          end
-        end
-
-        windings = windingnumber(s)
+      windings, returncode = if istargetwindingnumber(windings)
+        bifurcate!(s, history, f, istargetwindingnumber)
       else
-        keeper = closestomiddlevertex(s)
-        newnodeposition = centroidposition(s, keeper)
-        any(isequal(newnodeposition, position(v)) for v in s) && continue
-        centroid = Vertex(newnodeposition, f)
-        rootlostandsimplexunchanged = true
-        for vertex ∈ s
-          isequal(vertex, keeper) && continue
-          swap!(s, vertex, centroid)
-          windingnumber(s) == 0 || (rootlostandsimplexunchanged = false; break)
-          swap!(s, centroid, vertex)
-        end
-
-        returncode = updatehistory!(history, centroid)
-        returncode == :ENDLESS_LOOP && break
-
-        windings = if rootlostandsimplexunchanged
-          worst = worstvertex(s)
-          centroid < worst && swap!(s, worst, centroid)
-          0
-        else
-          windingnumber(s)
-        end
+        neldermeadstep!(s, history, f, config, reflect, expand, contract, shrink, shrink!)
       end
+
       returncode = assessconvergence(s, config, asg)
     end
   end

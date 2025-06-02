@@ -32,6 +32,7 @@ Base.length(s::Simplex{D}) where {D} = D + 1
 Base.iterate(s::Simplex) = iterate(s.vertices)
 Base.iterate(s::Simplex, counter) = iterate(s.vertices, counter)
 Base.getindex(s::Simplex, index) = s.vertices[index]
+Base.keys(s::Simplex) = eachindex(s.vertices)
 
 function sortbyangle(s::Simplex{1})
   return function output(v)
@@ -205,4 +206,49 @@ windingnumber (Int64)
 """
 windingnumber(s::Simplex{2}) = _windingnumber(s)
 
+"""
+root(s::Simplex{2})
+
+Return the root based on the plane defined by the values on the simplex
+
+Arguments:
+s (Simplex{2}) the 2D simplex, i.e. three points
+"""
+function root(s::Simplex{2, T, U, V}) where {T, U, V}
+  A = ones(real(U), 3, 3) # TODO: consider storing this on the simplex
+  b = zeros(U, 3) # TODO: consider storing this on the simplex
+  for (i, vertex) in enumerate(s)
+    p = position(vertex)
+    A[i, 2] = p[1]
+    A[i, 3] = p[2]
+    b[i] = value(vertex)
+  end
+  normalize!(b)
+  coeffs = A \ b # TODO: consider storing this on the simplex
+#  return -real(coeffs[1]) / real(coeffs[2]) - im * imag(coeffs[1]) / imag(coeffs[3])
+#  # Alternative more accurate method
+  A[1, 1] = real(coeffs[2])
+  A[2, 1] = imag(coeffs[2])
+  A[1, 2] = real(coeffs[3])
+  A[2, 2] = imag(coeffs[3])
+  b[1] = -real(coeffs[1])
+  b[2] = -imag(coeffs[1])
+  x = V(view(A, 1:2, 1:2) \ real.(view(b, 1:2))) # TODO: consider storing this on the simplex
+  return x
+end
+
+
+function trustregion(rootposition, s, ρ)
+  distance, index = findmin(norm(position(v) - rootposition) for v in s)
+
+  minx = [minimum(position(v)[i] for v in s) for i in 1:dimensionality(s)]
+  maxx = [maximum(position(v)[i] for v in s) for i in 1:dimensionality(s)]
+  radius = ρ * norm(maxx .- minx)
+  if distance > radius
+    closestposition = position(s[index])
+    direction = normalize(rootposition - closestposition)
+    return closestposition + direction * radius
+  end
+  return rootposition
+end
 

@@ -210,16 +210,17 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
       for _ in 1:10
         stopval=10.0^(-rand(3:14))
         root = rand(ComplexF64)
-        objective(x) = (x[1] + im * x[2]) - root
+        objective(x) = ((x[1] + im * x[2]) - root)^5
         ics = rand(2)
         sizes = rand(2)
         solution = WindingNelderMead.optimise(objective,
           ics, sizes, stopval=stopval, maxiters=10_000)
         (s, n, returncode, its) = solution
-        @test n == 1
         if returncode == :STOPVAL_REACHED
           @test abs(value(bestvertex(s))) <= stopval #defaults[:stopval]
         elseif returncode == :XTOL_REACHED && n != 0
+          @test n == 1
+          @test complex(WindingNelderMead.root(s)...) ≈ root
           @test isapprox(bestvertex(s).position[1], real(root),
                          rtol=defaults[:xtol_rel][1], atol=defualts[:xtol_abs][1])
           @test isapprox(bestvertex(s).position[2], imag(root),

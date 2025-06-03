@@ -86,7 +86,6 @@ worstvertex(s::Simplex) = selectmax(v->abs(value(v)), s.vertices)
 function secondworstvertex(s::Simplex, worst::Vertex)
   return selectmax(v->abs(value(v)) - Inf * isequal(worst, v), s.vertices)
 end
-secondworstvertex(s::Simplex) = secondworstvertex(s, worstvertex(s))
 
 function centroidposition(s::Simplex, ignoredvertex=worstvertex(s))
   verticesexceptignored = Iterators.filter(v->!isequal(v, ignoredvertex), s)
@@ -197,14 +196,14 @@ windingnumber (UInt)
 """
 windingnumber(s::Simplex{1}) = UInt(_windingnumber(s))
 """
-windingnumber(s::Simplex{2})
+windingnumber(s::Simplex)
 Arguments:
-s (Simplex{2}) the 2D simplex, i.e. three points forming a triangle
+s (Simplex) the ND simplex, i.e. three points forming a triangle
 
 Returns:
 windingnumber (Int64)
 """
-windingnumber(s::Simplex{2}) = _windingnumber(s)
+windingnumber(s::Simplex) = _windingnumber(s)
 
 """
 root(s::Simplex{2})
@@ -212,29 +211,29 @@ root(s::Simplex{2})
 Return the root based on the plane defined by the values on the simplex
 
 Arguments:
-s (Simplex{2}) the 2D simplex, i.e. three points
+ - `s` Simplex
 """
-function root(s::Simplex{2, T, U, V}) where {T, U, V}
-  A = ones(real(U), 3, 3) # TODO: consider storing this on the simplex
-  b = zeros(U, 3) # TODO: consider storing this on the simplex
+function root(s::Simplex{D, T, U, V}) where {D, T, U, V}
+  A3 = ones(real(U), D+1, 3) # TODO: consider storing this on the simplex
+  b3 = zeros(U, D+1) # TODO: consider storing this on the simplex
   for (i, vertex) in enumerate(s)
     p = position(vertex)
-    A[i, 2] = p[1]
-    A[i, 3] = p[2]
-    b[i] = value(vertex)
+    v = value(vertex)
+    A3[i, 2] = real(v)
+    A3[i, 3] = imag(v)
+    b3[i] = p[1] + im * p[2]
   end
-  normalize!(b)
-  coeffs = A \ b # TODO: consider storing this on the simplex
-#  return -real(coeffs[1]) / real(coeffs[2]) - im * imag(coeffs[1]) / imag(coeffs[3])
-#  # Alternative more accurate method
-  A[1, 1] = real(coeffs[2])
-  A[2, 1] = imag(coeffs[2])
-  A[1, 2] = real(coeffs[3])
-  A[2, 2] = imag(coeffs[3])
-  b[1] = -real(coeffs[1])
-  b[2] = -imag(coeffs[1])
-  x = V(view(A, 1:2, 1:2) \ real.(view(b, 1:2))) # TODO: consider storing this on the simplex
-  return x
+  coeffs = A3 \ b3 # TODO: consider storing this on the simplex
+  return [real(coeffs[1]) / real(coeffs[2]), imag(coeffs[1]) / imag(coeffs[3])]
+#  # Alternative less accurate method
+#  A2 = zeros(real(U), 2, 2) # TODO: consider storing this on the simplex
+#  A2[1, 1] = real(coeffs[2])
+#  A2[2, 1] = imag(coeffs[2])
+#  A2[1, 2] = real(coeffs[3])
+#  A2[2, 2] = imag(coeffs[3])
+#  b2 = [real(coeffs[1]), imag(coeffs[1])] # TODO: consider storing this on the simplex
+#  x2 = A2 \ b2 # TODO: consider storing this on the simplex
+#  return [x2[1], x2[2]]
 end
 
 

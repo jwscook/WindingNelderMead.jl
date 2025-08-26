@@ -236,18 +236,3 @@ function root(s::Simplex{D, T, U, V}) where {D, T, U, V}
 #  return [x2[1], x2[2]]
 end
 
-
-function trustregion(rootposition, s, ρ)
-  distance, index = findmin(norm(position(v) - rootposition) for v in s)
-
-  minx = [minimum(position(v)[i] for v in s) for i in 1:dimensionality(s)]
-  maxx = [maximum(position(v)[i] for v in s) for i in 1:dimensionality(s)]
-  radius = ρ * norm(maxx .- minx)
-  if distance > radius
-    closestposition = position(s[index])
-    direction = normalize(rootposition - closestposition)
-    return closestposition + direction * radius
-  end
-  return rootposition
-end
-

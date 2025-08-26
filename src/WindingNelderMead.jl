@@ -42,7 +42,7 @@ function convergenceconfig(dim::Int, T::Type; kwargs...)
   β = get(kwargs, :β, 0.5)
   γ = get(kwargs, :γ, 2.0)
   δ = get(kwargs, :δ, 0.5)
-  ρ = get(kwargs, :ρ, 2.0)
+  ρ = get(kwargs, :ρ, 0.0)
 
   (α >= 0) || throw(ArgumentError("$α >= 0"))
   (0 <= β < 1) || throw(ArgumentError("0 <= $β < 1"))
@@ -74,7 +74,7 @@ end
 Bifurcate the simplex to find the location of the minimum.
 Note that using the linear approximation of the root is not better than this.
 """
-function bifurcate!(s, history, f::F, istargetwindingnumber::G) where {F,G}
+function bifurcate!(s, history, f::F, istargetwindingnumber::G, expand::E) where {F,G,E}
    keeper = closestomiddlevertex(s)
    newnodeposition = centroidposition(s, keeper)
    any(isequal(newnodeposition, position(v)) for v in s) && return windingnumber(s)
@@ -91,7 +91,12 @@ function bifurcate!(s, history, f::F, istargetwindingnumber::G) where {F,G}
 
    if rootlostandsimplexunchanged
      worst = worstvertex(s)
-     centroid < worst && swap!(s, worst, centroid)
+     if centroid < worst
+       swap!(s, worst, centroid)
+     else
+       expanded = expand(centroid, worst)
+       expanded < worst && swap!(s, worst, expanded)
+     end
    end
    return windingnumber(s), returncode
 end
@@ -164,8 +169,8 @@ algorithm
 -  β (default 0.5): Contraction factor
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
--  ρ (default 2.0): Trust region factor - search first based on linear fit
-up to ρ times the size of the simplex
+-  ρ (default 0.0): Trust region factor - if greater than zero search first
+based on linear fit up to ρ times the size of the simplex
 """
 function optimise!(s::Simplex{D,T}, f::F; istargetwindingnumber::G=!iszero, kwargs...) where {D,T<:Real,F,G}
 
@@ -196,7 +201,7 @@ function optimise!(s::Simplex{D,T}, f::F; istargetwindingnumber::G=!iszero, kwar
       (iters += 1) < config[:maxiters] || break
 
       windings, returncode = if istargetwindingnumber(windings)
-        bifurcate!(s, history, f, istargetwindingnumber)
+        bifurcate!(s, history, f, istargetwindingnumber, expand)
       else
         neldermeadstep!(s, history, f, config, reflect, expand, contract, shrink, shrink!)
       end

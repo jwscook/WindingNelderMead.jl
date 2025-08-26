@@ -183,7 +183,7 @@ function optimise!(s::Simplex{D,T}, f::F; istargetwindingnumber::G=!iszero, kwar
       (iters += 1) < config[:maxiters] || break
 
       windings, returncode = if istargetwindingnumber(windings)
-        bifurcate!(s, history, f, istargetwindingnumber, expand)
+        bifurcate!(s, history, f, istargetwindingnumber)
       else
         neldermeadstep!(s, history, f, config, reflect, expand, contract, shrink, shrink!)
       end

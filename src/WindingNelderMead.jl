@@ -72,7 +72,7 @@ end
 Bifurcate the simplex to find the location of the minimum.
 Note that using the linear approximation of the root is not better than this.
 """
-function bifurcate!(s, history, f::F, istargetwindingnumber::G, expand::E) where {F,G,E}
+function bifurcate!(s, history, f::F, istargetwindingnumber::G) where {F,G}
    keeper = closestomiddlevertex(s)
    newnodeposition = centroidposition(s, keeper)
    any(isequal(newnodeposition, position(v)) for v in s) && return windingnumber(s)

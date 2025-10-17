@@ -26,7 +26,6 @@ function vertexpositions(ic::T, initial_steps::AbstractVector{V}
   return positions
 end
 
-
 # must explicitly use <= and >= because == can't overridden and will
 # be used in conjunction with < to create a <=
 import Base: isless, +, -, <=, >=, isequal, isnan, hash
@@ -44,4 +43,5 @@ end
 Base.hash(v::Vertex) = hash(hash(v.value), hash(v.position))
 
 Base.isnan(a::Vertex) = isnan(value(a))
+Base.isfinite(a::Vertex) = isfinite(value(a))
 

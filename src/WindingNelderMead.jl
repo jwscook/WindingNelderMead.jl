@@ -73,6 +73,8 @@ Find minimum of function, `f`, starting from Simplex, `s`, with options
 passed in via kwargs.
 
 # Keyword Arguments
+-  istargetwindingnumber (default !iszero): a function that returns true
+if it is passed the desired winding number
 -  stopval (default sqrt(eps())): stopping criterion when function evaluates
 equal to or less than stopval
 -  xtol_abs (default zero(T) scalar or with length dimensionality(s)): stop if
@@ -91,7 +93,7 @@ algorithm
 -  γ (default 2): Expansion factor
 -  δ (default 0.5): Shrinkage factor
 """
-function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
+function optimise!(s::Simplex{D,T}, f::F; istargetwindingnumber::G=!iszero, kwargs...) where {D,T<:Real, F, G}
 
   config = convergenceconfig(dimensionality(s), T; kwargs...)
 
@@ -119,7 +121,30 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
     totaltime += @elapsed begin
       (iters += 1) < config[:maxiters] || break
 
-      if windings == 0
+      if istargetwindingnumber(windings)
+        keeper = closestomiddlevertex(s)
+        newnodeposition = centroidposition(s, keeper)
+        any(isequal(newnodeposition, position(v)) for v in s) && continue
+        centroid = Vertex(newnodeposition, f)
+        rootlostandsimplexunchanged = true
+        for vertex ∈ s
+          isequal(vertex, keeper) && continue
+          swap!(s, vertex, centroid)
+          istargetwindingnumber(windingnumber(s)) && (rootlostandsimplexunchanged = false; break)
+          swap!(s, centroid, vertex)
+        end
+
+        returncode = updatehistory!(history, centroid)
+        returncode == :ENDLESS_LOOP && break
+
+        windings = if rootlostandsimplexunchanged
+          worst = worstvertex(s)
+          centroid < worst && swap!(s, worst, centroid)
+          0
+        else
+          windingnumber(s)
+        end
+      else
         best = bestvertex(s)
         worst = worstvertex(s)
         secondworst = secondworstvertex(s, worst)
@@ -146,29 +171,7 @@ function optimise!(s::Simplex{D,T}, f::F; kwargs...) where {F,D,T<:Real}
         end
 
         windings = windingnumber(s)
-      else
-        keeper = closestomiddlevertex(s)
-        newnodeposition = centroidposition(s, keeper)
-        any(isequal(newnodeposition, position(v)) for v in s) && continue
-        centroid = Vertex(newnodeposition, f)
-        rootlostandsimplexunchanged = true
-        for vertex ∈ s
-          isequal(vertex, keeper) && continue
-          swap!(s, vertex, centroid)
-          windingnumber(s) == 0 || (rootlostandsimplexunchanged = false; break)
-          swap!(s, centroid, vertex)
-        end
 
-        returncode = updatehistory!(history, centroid)
-        returncode == :ENDLESS_LOOP && break
-
-        windings = if rootlostandsimplexunchanged
-          worst = worstvertex(s)
-          centroid < worst && swap!(s, worst, centroid)
-          0
-        else
-          windingnumber(s)
-        end
       end
       returncode = assessconvergence(s, config, asg)
     end

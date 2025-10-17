@@ -189,6 +189,16 @@ using WindingNelderMead: bestvertex, issortedbyangle, hypervolume
         @test x[p[N]] == WindingNelderMead.selectmax(abs, x)
       end
     end
+
+    @testset "Simplex finite infinite nan values" begin
+      s = Simplex(x->im, [1.0, 3.0], 1.0)
+      @test all(isfinite, s)
+      s = Simplex(x->NaN, [1.0, 3.0], 1.0)
+      @test all(isnan, s)
+      s = Simplex(x->Inf, [1.0, 3.0], 1.0)
+      @test !any(isfinite, s)
+      @test all(!isnan, s)
+    end
   end
 
   @testset "End-to-end tests roots" begin
